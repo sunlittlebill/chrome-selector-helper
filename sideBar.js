@@ -27,10 +27,10 @@ chrome.devtools.panels.elements.onSelectionChanged.addListener(function () {
         // 清空上次结果
         clearContent(content);
 
-        // 生成选择器的处理 TODO
-        modal = createSelector(result);
-
         // 输出结果
+         setResult(result["selector"]);
+        //console.log(result["selector"]);
+
         createTagModal(modal, content);
 
         // 调整窗口
@@ -84,7 +84,7 @@ function createTagLine(modalArr, index) {
 
     ul.appendChild(li);
 
-    if (modal.length == 2) {
+    if (modal[1]) {
         ul.appendChild(createTagAttr(modal[1], attrLineClass));
         ul.classList.add("hasAttr");
         ul.firstChild.insertBefore(createActionTag(attrLineClass), ul.firstChild.firstChild);
@@ -120,18 +120,22 @@ function createTagAttr(attrs, clazz) {
  * @param index {number}
  * @returns {Element}
  */
-function createPiece(str, index) {
+function createPiece(item, index) {
     var
         clazz = "",
         clazz2 = "item-" + index,
+
+        str = item["value"],
+        isCheck = item["check"],
+
         overFlowHide = "overflow-hide",
         span = document.createElement("span");
     span.setAttribute("title", str);
 
-    if (str.startsWith("#")) { // id
-        clazz = "tagId";
-    } else if (str.startsWith(".")) { // class
+    if (str.startsWith(".")) { // class
         clazz = "tagClass";
+    } else if (str.startsWith("#")) { // id
+        clazz = "tagId";
     } else if (str.startsWith("[")) { // attribute
         clazz = "tagAttr";
     } else { // tag name
@@ -140,6 +144,7 @@ function createPiece(str, index) {
     span.innerText = str;
     span.classList.add(clazz);
     span.classList.add(clazz2);
+    isCheck && span.classList.add("isCheck");
 
     if (clazz != "tagName") {
         span.classList.add(overFlowHide);
@@ -189,58 +194,6 @@ function createActionTag(target) {
 }
 
 /**
- * 判断给定对象是否为空
- * @param obj {object}
- * @returns {boolean}
- */
-function isNotEmpty(obj) {
-    var
-        result = true,
-        type = typeof obj;
-
-    switch (type) {
-        case "undefined":
-            result = false;
-            break;
-        case "object":
-            result = isNotEmptyO(obj);
-            break;
-        case "string":
-            result = obj.trim().length > 0;
-            break;
-        default:
-            var isArr = Array.isArray(obj);
-            if (isArr) {
-                result = isArr.length > 0;
-            } else {
-                // number/boolean return true
-            }
-            break;
-    }
-
-    return result;
-}
-
-/**
- * 判断对象是否为空
- * @param obj {object}
- * @returns {boolean}
- */
-function isNotEmptyO(obj) {
-
-    if (typeof obj === "undefined" || obj === null) {
-        return false;
-    }
-
-    for (var p in obj) {
-        if (obj.hasOwnProperty(p)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/**
  * 清空html元素的内容
  * @param element {Element}
  */
@@ -255,15 +208,18 @@ function generateSelector() {
 
     // 设置结果
     setResult();
-    // 拷贝结果
-    copyToClipboard();
 }
 
 /**
  * 设置结果
  */
-function setResult() {
+function setResult(selector) {
 
+    var span = document.querySelector(".selector");
+    span.innerHTML = "jQuery('" + selector + "');";
+
+    // 拷贝结果
+    copyToClipboard(false);
 }
 
 // /****************************************nav bar*******************************************/
@@ -338,7 +294,7 @@ function autoLocate() {
 /**
  * 拷贝到剪切板
  */
-function copyToClipboard() {
+function copyToClipboard(toWarn) {
     var
         msg = "",
         range = document.createRange(),
@@ -355,7 +311,7 @@ function copyToClipboard() {
         msg = "拷贝失败，该chrome版本不支持此操作!";
     }
     window.getSelection().removeAllRanges();
-    warn(msg);
+    toWarn && warn(msg);
 }
 
 // TODO /*************************************iframe 相关 **********************************************/

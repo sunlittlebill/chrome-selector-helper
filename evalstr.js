@@ -1,5 +1,6 @@
 var evalstr = "var IGNORE_ATTR = ['id', 'class', 'style'];  var modalArr = []; ";
-
+var IGNORE_ATTR = ['id', 'class', 'style'];
+var modalArr = [];
 /**
  * 入口函数
  * @returns {Object}
@@ -16,19 +17,27 @@ function doMain() {
         return null;
     }
 
+    var
+        info = getTagInfo(target, null),
+        _modalArr = modalArr,
+        selector = createSelector(_modalArr);
+
+    _modalArr.reverse();
+
     return {
         /**
          * 被选中元素的信息和其父元素信息
          * @type {Object}
          */
-        info: getTagInfo(target, null),
+        info: info,
 
+        selector: selector,
         /**
          * @type {Array:[modal,modal,...]}
          * modal:{Array:[item,item,...]}
          * item:{object}
          */
-        modal: modalArr.reverse()
+        modal: _modalArr
     };
 }
 
@@ -96,6 +105,8 @@ function getTagInfo(tag, childInfo) {
     }
 
     isNotEmptyO(info.attr) && (info.modal[1] = _attrModal);
+
+    info.modal = initTagSelector(info.modal);
 
     // 全局变量 modalAr
     modalArr.push(info.modal);
@@ -254,7 +265,7 @@ function isNotEmptyO(obj) {
  * 生成modal的item
  * @param type
  * @param value
- * @returns {string}
+ * @returns {*}
  */
 function createModalItem(type, value) {
 
@@ -262,7 +273,10 @@ function createModalItem(type, value) {
         return null;
     }
 
-    var item = "";
+    var
+        item = "",
+        _result = [],
+        result = {};
 
     switch (type) {
         case "tagName": // tag name
@@ -272,31 +286,67 @@ function createModalItem(type, value) {
             item = "#" + value;
             break;
         case "tagClass": // tag class
-            item = [];
             for (var i = 0; i < value.length; i++) {
-                item.push("." + value[i]);
+                var _item = {
+                    check: false
+                };
+                _item["value"] = "." + value[i];
+                _result.push(_item);
             }
             break;
         default: // tag attr
             item = "[" + type + "=" + value + "]";
             break;
     }
-    return item;
+    result["value"] = item;
+    result["check"] = false;
+
+    return _result.length > 0 ? _result : result;
 }
 
 /**
  * 生成选择器(主入口)
  */
-function createSelector(modalArr) {
+function createSelector(modalArray) {
 
+    var isSibling = true,
+        selector = modalArray[0][2];
+
+    for (var i = 1; i < modalArray.length; i++) {
+        var
+            cSelector = modalArray[i - 1][2],
+            pSelector = modalArray[i][2];
+
+        if (!siftTagSelector(pSelector, cSelector)) {
+
+            isSibling = false;
+            for (var j = 0; j < modalArray[i].length; j++) {
+
+                if (Array.isArray(modalArray[i][j])) {
+                    for (var k = 0; k < modalArray[i][j].length; k++) {
+                        modalArray[i][j][k]["check"] = false;
+                    }
+                }
+            }
+        } else {
+            if (isSibling) {
+                selector = pSelector + " > " + selector;
+            } else {
+                selector = pSelector + " " + selector;
+            }
+        }
+    }
+    return selector;
 }
 
 /**
  * 初始化tag的选择器
  */
-function initTagSelector(modalItemArr) {
+function initTagSelector(modal) {
 
     var
+        _modal = modal[0],// modal[1]:attributes 暂不考虑
+
         /**
          * TODO 判断id的唯一性(只有不规范的页面会有多个相同的id)
          * @type {boolean}
@@ -313,36 +363,41 @@ function initTagSelector(modalItemArr) {
          */
         hasAttr = false,
 
-        tagName = null;
+        tagName = "";
 
-    for (var i = 0; i < modalItemArr.length; i++) {
+    for (var i = 0; i < _modal.length; i++) {
 
-        var item = modalItemArr[i];
+        var item = _modal[i];
 
-        if (str.startsWith("#")) { // id
+        if (item["value"].startsWith("#")) { // id
 
+            idStr = item["value"];
             hasId = true;
-            idStr = item;
-        } else if (str.startsWith(".")) { // class
-
+            _modal[i]["check"] = true;
+        } else if (item["value"].startsWith(".")) {
             hasClass = true;
-            clazzStr = clazzStr + item;
-        } else if (str.startsWith("[")) { // attribute
-
+            clazzStr = clazzStr + item["value"];
+            _modal[i]["check"] = true;
+        } else if (item["value"].startsWith("[")) {
+            // attribute
+            // to do nothing for now
         } else {
-            tagName = item;
+            tagName = item["value"];
         }
     }
 
-    if(hasId){
-        return idStr;
+    if (hasId) {
+        modal[2] = idStr;
+    } else if (hasClass) {
+        modal[2] = clazzStr;
+    } else {
+        modal[2] = tagName;
+        _modal[0]["check"] = true;
     }
 
-    if(hasClass){
-        return clazzStr;
-    }
+    modal[0] = _modal;
 
-    return tagName;
+    return modal;
 }
 
 /**
@@ -352,11 +407,15 @@ function initTagSelector(modalItemArr) {
  *  var cElements = document.querySelectorAll(cSelector);
  *  pElements.length < cElements.length ? pSelector有效 : pSelector无效
  *
- * @param pModal: parent node modal {Array}
- * @param cModal: child node modal {Array}
+ * @param pSelector: parent node selector {string}
+ * @param cSelector: child node selector {string}
  */
-function siftTagSelector(pModal, cModal) {
+function siftTagSelector(pSelector, cSelector) {
+    var
+        cElements = document.querySelectorAll(cSelector),
+        pElements = document.querySelectorAll(pSelector + " > " + cSelector);
 
+    return pElements.length < cElements.length;
 }
 
 evalstr = evalstr + doMain + " ";
