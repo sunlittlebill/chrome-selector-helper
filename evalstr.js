@@ -1,0 +1,376 @@
+var evalstr = "var IGNORE_ATTR = ['id', 'class', 'style'];  var modalArr = []; ";
+
+/**
+ * 入口函数
+ * @returns {Object}
+ */
+function doMain() {
+
+    /**
+     * 当前选中的标签
+     * @type {Element}
+     */
+    var target = $0;
+
+    if (isComment(target)) {
+        return null;
+    }
+
+    return {
+        /**
+         * 被选中元素的信息和其父元素信息
+         * @type {Object}
+         */
+        info: getTagInfo(target, null),
+
+        /**
+         * @type {Array:[modal,modal,...]}
+         * modal:{Array:[item,item,...]}
+         * item:{object}
+         */
+        modal: modalArr.reverse()
+    };
+}
+
+/**
+ * 获取元素信息
+ * @param tag
+ * @param childInfo
+ * @returns {Object||null}
+ */
+function getTagInfo(tag, childInfo) {
+
+    var
+        info = {
+            tagName: "",
+            tagId: "",
+            tagClass: "",
+            attr: null,
+            position: {
+                top: 0,
+                left: 0
+            },
+            /**
+             * [0]:tagName|id|class
+             * [1]:attributes
+             */
+            modal: [],
+            childInfo: childInfo
+        },
+
+        _modal = [],
+        _attrModal = [];
+
+    if (!tag) {
+        return info;
+    }
+
+    info.tagName = tag.tagName.toLowerCase();
+    if (isNotEmpty(info.tagName)) {
+        _modal.push(createModalItem("tagName", info.tagName));
+    }
+
+    info.tagId = tag.id;
+    if (isNotEmpty(info.tagId)) {
+        _modal.push(createModalItem("tagId", info.tagId));
+    }
+
+    info.tagClass = Array.prototype.slice.call(tag.classList, 0, tag.classList.length);
+    if (isNotEmpty(info.tagClass)) {
+        _modal = _modal.concat(createModalItem("tagClass", info.tagClass));
+    }
+
+    info.modal[0] = _modal;
+
+    info.attr = {};
+
+    for (var i = 0; i < tag.attributes.length; i++) {
+        var
+            attr = tag.attributes[i],
+            name = attr['name'];
+
+        if (IGNORE_ATTR.indexOf(name) < 0) {
+            info.attr[name] = attr['value'];
+            _attrModal.push(createModalItem(name, attr['value']));
+        }
+    }
+
+    isNotEmptyO(info.attr) && (info.modal[1] = _attrModal);
+
+    // 全局变量 modalAr
+    modalArr.push(info.modal);
+
+    info.position.left = getTagLeft(tag);
+    info.position.top = getTagTop(tag);
+
+    if (tag.parentElement) {
+
+        info = getTagInfo(tag.parentElement, info);
+    }
+    return info;
+}
+
+/**
+ * 获取元素的x坐标
+ * @param tag
+ * @returns {Number|number}
+ */
+function getTagLeft(tag) {
+    var actualLeft = tag.offsetLeft;
+    var current = tag.offsetParent;
+    while (current !== null) {
+        actualLeft += current.offsetLeft;
+        current = current.offsetParent;
+    }
+    return actualLeft;
+}
+
+/**
+ * 获取元素的y坐标
+ * @param tag
+ * @returns {Number|number}
+ */
+function getTagTop(tag) {
+    var actualTop = tag.offsetTop;
+    var current = tag.offsetParent;
+    while (current !== null) {
+        actualTop += current.offsetTop;
+        current = current.offsetParent;
+    }
+    return actualTop;
+}
+
+/**
+ * 判断是否是注释
+ * @param tag
+ * @returns {boolean}
+ */
+function isComment(tag) {
+    return tag ? tag.tagName == '#comment' : false;
+}
+
+/**
+ * 遮盖选中的元素
+ * @param ele {Element}
+ */
+function coverToEle(ele) {
+    if (!ele) {
+        return;
+    }
+
+    var arr = document.querySelectorAll(".-slct");
+    for (var i = 0; i < arr.length; i++) {
+        arr[i].parentNode.removeChild(arr[i]);
+    }
+
+    var div = document.createElement("div");
+    div.classList.add("-slct");
+
+    div.style.cursor = "pointer";
+    div.style.position = "absolute";
+    div.style.zIndex = "999999999999";
+    div.style.backgroundColor = "rgb(255, 0, 0)";
+    div.style.opacity = 0.7;
+
+    div.style.height = ele.getBoundingClientRect().height + "px";
+    div.style.width = ele.getBoundingClientRect().width + "px";
+    div.style.top = getTagTop(ele) + "px";
+    div.style.left = getTagLeft(ele) + "px";
+
+    div.innerText = "";
+    document.body.appendChild(div);
+    div.addEventListener("click", function () {
+        div.parentElement.removeChild(div);
+    });
+    // window.scrollTo(ele.x, ele.y);
+}
+
+/**
+ * 滚动到tag位置
+ */
+function scrollToTag() {
+    var
+        selectedTag = $0,
+        x = getTagLeft(selectedTag),
+        y = getTagTop(selectedTag);
+    window.scrollTo(x, y);
+
+    return {x: x, y: y};
+}
+
+/**
+ * 判断给定对象是否为空
+ * @param obj {object}
+ * @returns {boolean}
+ */
+function isNotEmpty(obj) {
+    var
+        result = true,
+        type = typeof obj;
+
+    switch (type) {
+        case "undefined":
+            result = false;
+            break;
+        case "object":
+            result = isNotEmptyO(obj);
+            break;
+        case "string":
+            result = obj.trim().length > 0;
+            break;
+        default:
+            var isArr = Array.isArray(obj);
+            if (isArr) {
+                result = isArr.length > 0;
+            } else {
+                // number/boolean return true
+            }
+            break;
+    }
+
+    return result;
+}
+
+/**
+ * 判断对象是否为空
+ * @param obj {object}
+ * @returns {boolean}
+ */
+function isNotEmptyO(obj) {
+
+    if (typeof obj === "undefined" || obj === null) {
+        return false;
+    }
+
+    for (var p in obj) {
+        if (obj.hasOwnProperty(p)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * 生成modal的item
+ * @param type
+ * @param value
+ * @returns {string}
+ */
+function createModalItem(type, value) {
+
+    if (!isNotEmpty(type) || !isNotEmpty(value)) {
+        return null;
+    }
+
+    var item = "";
+
+    switch (type) {
+        case "tagName": // tag name
+            item = value;
+            break;
+        case "tagId": // tag id
+            item = "#" + value;
+            break;
+        case "tagClass": // tag class
+            item = [];
+            for (var i = 0; i < value.length; i++) {
+                item.push("." + value[i]);
+            }
+            break;
+        default: // tag attr
+            item = "[" + type + "=" + value + "]";
+            break;
+    }
+    return item;
+}
+
+/**
+ * 生成选择器(主入口)
+ */
+function createSelector(modalArr) {
+
+}
+
+/**
+ * 初始化tag的选择器
+ */
+function initTagSelector(modalItemArr) {
+
+    var
+        /**
+         * TODO 判断id的唯一性(只有不规范的页面会有多个相同的id)
+         * @type {boolean}
+         */
+        hasId = false,
+        idStr = "",
+
+        clazzStr = "",
+        hasClass = false,
+
+        /**
+         * to do nothing for now
+         * @type {boolean}
+         */
+        hasAttr = false,
+
+        tagName = null;
+
+    for (var i = 0; i < modalItemArr.length; i++) {
+
+        var item = modalItemArr[i];
+
+        if (str.startsWith("#")) { // id
+
+            hasId = true;
+            idStr = item;
+        } else if (str.startsWith(".")) { // class
+
+            hasClass = true;
+            clazzStr = clazzStr + item;
+        } else if (str.startsWith("[")) { // attribute
+
+        } else {
+            tagName = item;
+        }
+    }
+
+    if(hasId){
+        return idStr;
+    }
+
+    if(hasClass){
+        return clazzStr;
+    }
+
+    return tagName;
+}
+
+/**
+ * 筛选有效选择器
+ * 思路:
+ *  var pElements = document.querySelectorAll(pSelector > cSelector);
+ *  var cElements = document.querySelectorAll(cSelector);
+ *  pElements.length < cElements.length ? pSelector有效 : pSelector无效
+ *
+ * @param pModal: parent node modal {Array}
+ * @param cModal: child node modal {Array}
+ */
+function siftTagSelector(pModal, cModal) {
+
+}
+
+evalstr = evalstr + doMain + " ";
+evalstr = evalstr + getTagInfo + " ";
+evalstr = evalstr + getTagLeft + " ";
+evalstr = evalstr + getTagTop + " ";
+evalstr = evalstr + isComment + " ";
+evalstr = evalstr + scrollToTag + " ";
+
+evalstr = evalstr + isNotEmpty + " ";
+evalstr = evalstr + isNotEmptyO + " ";
+evalstr = evalstr + createModalItem + " ";
+evalstr = evalstr + createSelector + " ";
+evalstr = evalstr + initTagSelector + " ";
+evalstr = evalstr + siftTagSelector + " ";
+
+evalstr = evalstr + " doMain();";

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>extensionSideBar</title>
+    <link rel="stylesheet" href="font-awesome/css/font-awesome.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .bar {
+            width: 100%;
+            padding: 4px 0;
+            display: inline-block;
+        }
+
+        .bar-bottom-line {
+            border-top: 0;
+            border-right: 0;
+            border-left: 0;
+            margin: 0;
+            border-bottom: 1px solid silver;
+        }
+
+        .content {
+            padding: 0 4px 0 4px;
+        }
+
+        .content ul {
+            margin: 0;
+            list-style: none;
+            -webkit-padding-start: 0;
+        }
+
+        .content span {
+            border: 1px solid #CAC5C5;
+            display: inline-block;
+            background-color: #ECE7E7;
+            text-align: center;
+            padding: 2px;
+            margin: 2px;
+            max-height: 20px;
+            min-width: 30px;
+            max-width: 100px;
+            cursor: default;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        /*id|class|attr值过长时hide*/
+        .content span.overflow-hide {
+            vertical-align: bottom;
+            overflow-x: hidden;
+        }
+
+        /*attr默认不显示*/
+        [class^=tag-line-attr-] {
+            display: none;
+        }
+
+        [class^=tag-line-attr-].show {
+            display: block;
+        }
+
+        ul.noAttr {
+            margin-left: 12px;
+        }
+
+        li.show {
+            /*margin-left: 24px;*/
+            margin-left: 30px;
+        }
+
+        li.show > span {
+            overflow: hidden;
+            border-style: dashed;
+        }
+
+        .fa {
+            width: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .bar > .fa {
+            width: 20px;
+            margin: 0 0 0 8px;
+            font-size: 14px;
+            color: #505050;
+        }
+
+        .fa.fa-toggle-on {
+            color: #d80000;
+        }
+
+        .result {
+            padding: 8px 0 8px 18px;
+        }
+
+        .result span {
+            display: none;
+        }
+
+        .result span.active {
+            display: initial;
+        }
+        .result span.alert {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+<div class="bar">
+    <i class="item-location-auto fa fa-toggle-off" title="自动定位"></i>
+    <i class="item-location fa fa-map-marker" title="定位"></i>
+    <i class="item-location fa fa-th" title="标记所有"></i>
+    <i class="item-copy fa fa-clipboard" title="拷贝到剪切板"></i>
+</div>
+<hr class="bar-bottom-line">
+<div class="result">
+    结果：<span class="selector active">jQuery(".container");</span> <span class="alert"></span>
+</div>
+<div class="content"></div>
+<script src="evalstr.js"></script>
+<script src="sideBar.js"></script>
+</body>
+</html>
