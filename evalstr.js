@@ -31,9 +31,13 @@ function doMain() {
 
         selector: selector,
         /**
-         * @type {Array:[modal,modal,...]}
-         * modal:{Array:[item,item,...]}
-         * item:{object}
+         * @type {Array}
+         * modalArr:{Array:[modal,modal,...]}
+         * modal:[modalItem,modalItem,modalItem] length == 3
+         * modal[0]: [tagName-object,id-object,class-object,class-object,...]
+         * modal[1]: attributes (保留将来使用)
+         * modal[2]: sifted selector(初步筛选过的单标签选则器)
+         * xxx-object:{value:"",check:false}
          */
         modal: _modalArr
     };
@@ -125,8 +129,12 @@ function getTagInfo(tag, childInfo) {
  * @returns {Number|number}
  */
 function getTagLeft(tag) {
+    if (!tag) {
+        return 0;
+    }
     var actualLeft = tag.offsetLeft;
     var current = tag.offsetParent;
+
     while (current !== null) {
         actualLeft += current.offsetLeft;
         current = current.offsetParent;
@@ -140,6 +148,9 @@ function getTagLeft(tag) {
  * @returns {Number|number}
  */
 function getTagTop(tag) {
+    if (!tag) {
+        return 0;
+    }
     var actualTop = tag.offsetTop;
     var current = tag.offsetParent;
     while (current !== null) {
@@ -159,17 +170,21 @@ function isComment(tag) {
 }
 
 /**
+ *
  * 遮盖选中的元素
  * @param ele {Element}
+ * @param clearAll {boolean}
  */
-function coverToEle(ele) {
+function coverToEle(ele, clearAll, index) {
     if (!ele) {
         return;
     }
 
-    var arr = document.querySelectorAll(".-slct");
-    for (var i = 0; i < arr.length; i++) {
-        arr[i].parentNode.removeChild(arr[i]);
+    if (clearAll) {
+        var arr = document.querySelectorAll(".-slct");
+        for (var i = 0; i < arr.length; i++) {
+            arr[i].parentNode.removeChild(arr[i]);
+        }
     }
 
     var div = document.createElement("div");
@@ -177,6 +192,7 @@ function coverToEle(ele) {
 
     div.style.cursor = "pointer";
     div.style.position = "absolute";
+    div.style.color = "white";
     div.style.zIndex = "999999999999";
     div.style.backgroundColor = "rgb(255, 0, 0)";
     div.style.opacity = 0.7;
@@ -186,22 +202,24 @@ function coverToEle(ele) {
     div.style.top = getTagTop(ele) + "px";
     div.style.left = getTagLeft(ele) + "px";
 
-    div.innerText = "";
+    div.innerText = index != null ? "[" + index + "]" : "";
     document.body.appendChild(div);
+
     div.addEventListener("click", function () {
         div.parentElement.removeChild(div);
     });
-    // window.scrollTo(ele.x, ele.y);
 }
 
 /**
  * 滚动到tag位置
+ * @returns {{x: (Number|number), y: (Number|number)}}
  */
 function scrollToTag() {
     var
         selectedTag = $0,
         x = getTagLeft(selectedTag),
         y = getTagTop(selectedTag);
+
     window.scrollTo(x, y);
 
     return {x: x, y: y};
@@ -304,6 +322,8 @@ function createModalItem(type, value) {
 
 /**
  * 生成选择器(主入口)
+ * @param modalArray {Array}
+ * @returns {*}
  */
 function createSelector(modalArray) {
 
@@ -339,6 +359,8 @@ function createSelector(modalArray) {
 
 /**
  * 初始化tag的选择器
+ * @param modal {object}
+ * @returns {*}
  */
 function initTagSelector(modal) {
 

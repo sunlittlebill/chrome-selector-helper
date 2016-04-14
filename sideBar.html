@@ -21,7 +21,7 @@
             border-right: 0;
             border-left: 0;
             margin: 0;
-            border-bottom: 1px solid silver;
+            border-bottom: 1px solid #bdbdbd;
         }
 
         .content {
@@ -35,7 +35,7 @@
         }
 
         .content span {
-            border: 1px solid #CAC5C5;
+            border: 1px solid #d5d5d5;
             display: inline-block;
             background-color: #ECE7E7;
             text-align: center;
@@ -120,12 +120,13 @@
 <div class="bar">
     <i class="item-location-auto fa fa-toggle-off" title="自动定位"></i>
     <i class="item-location fa fa-map-marker" title="定位"></i>
-    <i class="item-location fa fa-th" title="标记所有"></i>
+    <i class="item-location-all fa fa-th" title="标记所有"></i>
     <i class="item-copy fa fa-clipboard" title="拷贝到剪切板"></i>
 </div>
 <hr class="bar-bottom-line">
 <div class="result">
-    结果：<span class="selector active">无</span> <span class="alert"></span>
+    选择器：<span class="selector active">无</span> <span class="alert"></span> <br/>
+    元素数：<span class="selector-num active">0</span>
 </div>
 <div class="content"></div>
 <script src="evalstr.js"></script>

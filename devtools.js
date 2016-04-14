@@ -8,7 +8,7 @@ chrome.devtools.panels.elements.createSidebarPane("Selector", function (sidebar)
         panel.toggleSelectionListener(true);
 
         var resizeFunc = function () {
-            var newHeight = (this.document.body.getBoundingClientRect().height + 60) + "px";
+            var newHeight = (this.document.body.getBoundingClientRect().height + 30) + "px";
             sidebar.setHeight(newHeight);
         };
 

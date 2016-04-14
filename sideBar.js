@@ -5,6 +5,12 @@ var
      */
     autoLocateSwitch = false,
 
+    modalArrGlobal,
+
+    selectChange,
+
+    selectorGlobal,// 用户自定义selector时使用
+
     /**
      * 调试开关
      * @type {boolean}
@@ -14,7 +20,8 @@ var
 //_debug = false;
 
 /**
- * 为改变选中的元素添加事件监听器
+ * 为改变选中的元素添加/删除事件监听器
+ * @param toAdd {boolean}
  */
 function toggleSelectionListener(toAdd) {
     if (toAdd) {
@@ -33,25 +40,26 @@ function selectionChangedListener() {
         if (!result) {
             return;
         }
-        var
-            modal = result["modal"],
+        debug(result);
+        var content = document.getElementsByClassName("content")[0];
 
-            content = document.getElementsByClassName("content")[0];
+        modalArrGlobal = result["modal"];
 
         // 清空上次结果
         clearContent(content);
 
-        // 输出结果
-        setResult(result["selector"]);
-        //console.log(result["selector"]);
+        selectorGlobal = result["selector"];
 
-        createTagModal(modal, content);
+        // 输出结果
+        setResult(selectorGlobal, true);
+
+        createTagModal(modalArrGlobal, content);
 
         // 调整窗口
         resize();
 
         // 高亮(有色层遮盖)选中的元素
-        inspectEval("(" + coverToEle.toString() + "($0))");
+        inspectEval("(" + coverToEle.toString() + "($0, true))");
 
         // 自动定位到当前选中元素
         autoLocateSwitch && inspectEval("(" + scrollToTag + "())");
@@ -81,28 +89,36 @@ function createTagModal(modalArr, content) {
  * @param index {number}
  * @returns {Element}
  */
-function createTagLine(modalArr, index) {
+function createTagLine(modalArr, modalArrIndex) {
     var
-        modal = modalArr[index],
-        _modal = modal[0],
-        clazz = "tag-line-" + index,
-        attrLineClass = "tag-line-attr-" + index,
+        modal = modalArr[modalArrIndex],
+
+        _modalIndex = 0,
+        _modal = modal[_modalIndex],
+
+        _modalAttrIndex = 1,
+        _modalArr = modal[_modalAttrIndex],
+
+        clazz = "tag-line-" + modalArrIndex,
+        attrLineClass = "tag-line-attr-" + modalArrIndex,
         ul = document.createElement("ul"),
         li = document.createElement("li");
 
     ul.classList.add(clazz);
 
     for (var i = 0; i < _modal.length; i++) {
-        li.appendChild(createPiece(_modal[i], i));
+        li.appendChild(createPiece(_modal[i], i, _modalIndex, modalArrIndex));
     }
 
     ul.appendChild(li);
 
-    if (modal[1]) {
-        ul.appendChild(createTagAttr(modal[1], attrLineClass));
+    if (_modalArr) {
+
+        ul.appendChild(createTagAttr(_modalArr, attrLineClass));
         ul.classList.add("hasAttr");
         ul.firstChild.insertBefore(createActionTag(attrLineClass), ul.firstChild.firstChild);
     } else {
+
         ul.classList.add("noAttr");
     }
 
@@ -130,14 +146,14 @@ function createTagAttr(attrs, clazz) {
 
 /**
  * 创建一个tag属性的span标签
- * @param str {string}
+ * @param item {string}
  * @param index {number}
  * @returns {Element}
  */
-function createPiece(item, index) {
+function createPiece(item, spanIndex, modalIndex, modalArrIndex) {
     var
         clazz = "",
-        clazz2 = "item-" + index,
+        clazz2 = "item-" + spanIndex,
 
         str = item["value"],
         isCheck = item["check"],
@@ -163,11 +179,17 @@ function createPiece(item, index) {
     if (clazz != "tagName") {
         span.classList.add(overFlowHide);
     }
+
+    // 自定义selector时用
+    span.dataset.index = [modalArrIndex, modalIndex, spanIndex];
+
+    span.addEventListener("click", pieceListener.bind(span));
     return span;
 }
 
 /**
  * 创建展开/折叠标签
+ * @param target {string}
  * @returns {Element}
  */
 function createActionTag(target) {
@@ -217,26 +239,92 @@ function clearContent(element) {
 
 /**
  * 设置结果
+ * @param selector {string}
+ * @param toCopy {boolean}
  */
-function setResult(selector) {
+function setResult(selector, toCopy) {
 
-    var span = document.querySelector(".selector");
+    var
+        selectorSpan = document.querySelector(".selector"),
+        numSpan = document.querySelector(".selector-num");
 
     inspectEval(
         "jQuery.fn.jquery",
         function (result, isException) {
             if (isException) {
-
-                span.innerHTML = "$('" + selector + "');";
+                warn("注意：此页面不支持jQuery!");
+                selectorSpan.innerHTML = "$('" + selector + "');";
             } else {
                 debug("jQuery version " + result);
-                span.innerHTML = "jQuery('" + selector + "');";
+                selectorSpan.innerHTML = "jQuery('" + selector + "');";
             }
 
+            inspectEval("$$('" + selector + "').length", function (res, ex) {
+
+                if (ex) {
+                    numSpan.innerHTML = "长度计算出错!";
+                } else {
+                    numSpan.innerHTML = res;
+                }
+            });
+
             // 拷贝结果
-            copyToClipboard(false);
+            toCopy && copyToClipboard(false);
         }
     );
+}
+
+function pieceListener() {
+    var
+        isChkCls = "isCheck",
+        index = this.dataset.index.split(","),
+        isCheck = this.classList.contains(isChkCls);
+
+    this.classList.toggle(isChkCls);
+    debug(isCheck);
+    modalArrGlobal[index[0]][index[1]][index[2]]["check"] = !isCheck;
+
+    selectorGlobal = modalToSelector();
+
+    setResult(selectorGlobal, false);
+}
+
+function modalToSelector() {
+    var
+        indexCache = -1,
+
+        selector = "";
+
+    selectChange = true;
+
+    for (var i = 0; i < modalArrGlobal.length; i++) {
+
+        var
+            sibling = "", // 相邻元素
+            subSelector = "",
+            modal = modalArrGlobal[i],
+            modalItem = modal[0]; // modal[0]: [tagName-object,id-object,class-object,class-object,...]
+
+        for (var j = 0; j < modalItem.length; j++) {
+            var itemObject = modalItem[j];
+            if (itemObject["check"]) {
+                subSelector = subSelector + itemObject['value'];
+
+                // 相邻元素
+                sibling = ((indexCache + 1) == i) ? " > " : " ";
+            }
+        }
+
+        if (subSelector) {
+            if (indexCache != -1) {
+                selector = selector + sibling + subSelector;
+            } else {
+                selector = subSelector;
+            }
+            indexCache = i;
+        }
+    }
+    return selector;
 }
 
 // /****************************************nav bar*******************************************/
@@ -245,7 +333,7 @@ var
      * bar item's class
      * @type {string[]}
      */
-    barItems = ["item-location", "item-location-auto", "item-copy"],
+    barItems = ["item-location", "item-location-auto", "item-location-all", "item-copy"],
 
     /**
      * the tool bar
@@ -267,8 +355,12 @@ for (var i = 0; i < barItems.length; i++) {
         case 1:
             clickListener = autoLocate;
             break;
-        // copy result to clipboard
+        // mark all tag
         case 2:
+            clickListener = markAll;
+            break;
+        // copy result to clipboard
+        case 3:
             clickListener = copyToClipboard;
             break;
         default:
@@ -283,6 +375,9 @@ for (var i = 0; i < barItems.length; i++) {
 function locate() {
     debug("locate");
 
+    if (selectChange) {
+        inspectEval("inspect(document.querySelector('" + selectorGlobal + "'))", null);
+    }
     inspectEval("(" + scrollToTag + "())");
 }
 
@@ -306,6 +401,30 @@ function autoLocate() {
     }
 
     autoLocateSwitch = !autoLocateSwitch;
+}
+
+function markAll() {
+
+    inspectEval(
+        getTagLeft
+        + getTagTop
+        + scrollToTag
+        + coverToEle
+        + " (" + _markAll + ")('" + selectorGlobal + "')"
+    );
+
+    function _markAll(selector) {
+        var tags = $$(selector);
+
+        for (var i = 0; i < tags.length; i++) {
+            if (i == 0) {
+                coverToEle(tags[i], true, 0);
+            } else {
+                coverToEle(tags[i], false, i);
+            }
+        }
+        // scrollToTag();
+    }
 }
 
 /**
