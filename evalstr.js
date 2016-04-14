@@ -3,13 +3,13 @@ var evalstr = "var IGNORE_ATTR = ['id', 'class', 'style', 'data-'];  var modalAr
  * 入口函数
  * @returns {Object}
  */
-function doMain() {
+function doMain(target) {
 
     /**
      * 当前选中的标签
      * @type {Element}
      */
-    var target = $0;
+    // var target = $0;
 
     if (isComment(target)) {
         return null;
@@ -190,6 +190,7 @@ function coverToEle(ele, clearAll, index) {
     var div = document.createElement("div");
     div.classList.add("-slct");
 
+    div.style.lineHeight = "14px";
     div.style.cursor = "pointer";
     div.style.position = "absolute";
     div.style.color = "white";
@@ -202,7 +203,16 @@ function coverToEle(ele, clearAll, index) {
     div.style.top = getTagTop(ele) + "px";
     div.style.left = getTagLeft(ele) + "px";
 
-    div.innerText = index != null ? "[" + index + "]" : "";
+    if (index != null) {
+
+        var span = document.createElement("span");
+        span.style.display = "inline-block";
+        span.style.verticalAlign = "sub";
+        span.style.textAlign = "left";
+        span.style.width = "100%";
+        span.innerText = "[" + index + "]";
+        div.appendChild(span);
+    }
     document.body.appendChild(div);
 
     div.addEventListener("click", function () {
@@ -466,4 +476,4 @@ evalstr = evalstr + createSelector + " ";
 evalstr = evalstr + initTagSelector + " ";
 evalstr = evalstr + siftTagSelector + " ";
 
-evalstr = evalstr + " doMain();";
+evalstr = evalstr + " doMain($0);";
