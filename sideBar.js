@@ -14,11 +14,25 @@ var
 //_debug = false;
 
 /**
- * 改变选中的元素
+ * 为改变选中的元素添加事件监听器
  */
-chrome.devtools.panels.elements.onSelectionChanged.addListener(function () {
+function toggleSelectionListener(toAdd) {
+    if (toAdd) {
+        chrome.devtools.panels.elements.onSelectionChanged.addListener(selectionChangedListener);
+    } else {
+        chrome.devtools.panels.elements.onSelectionChanged.removeListener(selectionChangedListener);
+    }
+}
+
+/**
+ * onSelectionChanged listener
+ */
+function selectionChangedListener() {
 
     inspectEval(evalstr, function (result) {
+        if (!result) {
+            return;
+        }
         var
             modal = result["modal"],
 
@@ -28,7 +42,7 @@ chrome.devtools.panels.elements.onSelectionChanged.addListener(function () {
         clearContent(content);
 
         // 输出结果
-         setResult(result["selector"]);
+        setResult(result["selector"]);
         //console.log(result["selector"]);
 
         createTagModal(modal, content);
@@ -42,7 +56,7 @@ chrome.devtools.panels.elements.onSelectionChanged.addListener(function () {
         // 自动定位到当前选中元素
         autoLocateSwitch && inspectEval("(" + scrollToTag + "())");
     });
-});
+}
 
 /**
  * 创建元素模型
@@ -202,24 +216,27 @@ function clearContent(element) {
 }
 
 /**
- * 生成选择器
- */
-function generateSelector() {
-
-    // 设置结果
-    setResult();
-}
-
-/**
  * 设置结果
  */
 function setResult(selector) {
 
     var span = document.querySelector(".selector");
-    span.innerHTML = "jQuery('" + selector + "');";
 
-    // 拷贝结果
-    copyToClipboard(false);
+    inspectEval(
+        "jQuery.fn.jquery",
+        function (result, isException) {
+            if (isException) {
+
+                span.innerHTML = "$('" + selector + "');";
+            } else {
+                debug("jQuery version " + result);
+                span.innerHTML = "jQuery('" + selector + "');";
+            }
+
+            // 拷贝结果
+            copyToClipboard(false);
+        }
+    );
 }
 
 // /****************************************nav bar*******************************************/
@@ -357,10 +374,10 @@ function replaceFrame() {
 function inspectEval(evalStr, callback) {
     chrome.devtools.inspectedWindow.eval(
         evalStr,
-        function (result) {
-            debug(result);
+        function () {
+            debug(arguments);
             if (typeof callback === "function") {
-                callback(result);
+                callback.apply(callback, arguments);
             }
         }
     );

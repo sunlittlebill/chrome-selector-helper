@@ -1,6 +1,4 @@
-var evalstr = "var IGNORE_ATTR = ['id', 'class', 'style'];  var modalArr = []; ";
-var IGNORE_ATTR = ['id', 'class', 'style'];
-var modalArr = [];
+var evalstr = "var IGNORE_ATTR = ['id', 'class', 'style', 'data-'];  var modalArr = []; ";
 /**
  * 入口函数
  * @returns {Object}
@@ -374,6 +372,7 @@ function initTagSelector(modal) {
             idStr = item["value"];
             hasId = true;
             _modal[i]["check"] = true;
+            break;
         } else if (item["value"].startsWith(".")) {
             hasClass = true;
             clazzStr = clazzStr + item["value"];
@@ -412,8 +411,21 @@ function initTagSelector(modal) {
  */
 function siftTagSelector(pSelector, cSelector) {
     var
-        cElements = document.querySelectorAll(cSelector),
+        cElements,
+        pElements;
+
+    try {
+        cElements = document.querySelectorAll(cSelector);
         pElements = document.querySelectorAll(pSelector + " > " + cSelector);
+    } catch (e) {
+        // 百度搜出的结果中会有 id=2这种标签
+        // document.querySelectorAll("#2")会报错
+        console.warn(e);
+        if (jQuery) {
+            cElements = jQuery(cSelector);
+            pElements = jQuery(pSelector + " > " + cSelector);
+        }
+    }
 
     return pElements.length < cElements.length;
 }
