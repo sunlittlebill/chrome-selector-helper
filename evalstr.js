@@ -207,7 +207,7 @@ function coverToEle(ele, clearAll, index) {
 
         var span = document.createElement("span");
         span.style.display = "inline-block";
-        span.style.verticalAlign = "sub";
+        // span.style.verticalAlign = "sub";
         span.style.textAlign = "left";
         span.style.width = "100%";
         span.innerText = "[" + index + "]";
