@@ -16,8 +16,8 @@ var
      * @type {boolean}
      * @private
      */
-    _debug = true;
-//_debug = false;
+    //_debug = true;
+_debug = false;
 
 /**
  * 为改变选中的元素添加/删除事件监听器
@@ -251,13 +251,20 @@ function setResult(selector, toCopy) {
     inspectEval(
         "jQuery.fn.jquery",
         function (result, isException) {
+            var toWarn = "";
             if (isException) {
-                warn("注意：此页面不支持jQuery!");
+                toWarn = "注意：此页面不支持jQuery!";
                 selectorSpan.innerHTML = "$('" + selector + "');";
             } else {
                 debug("jQuery version " + result);
                 selectorSpan.innerHTML = "jQuery('" + selector + "');";
             }
+
+            // 拷贝结果
+            toCopy && copyToClipboard(_debug);
+
+            // 要先拷贝后再提示(由于提示时会隐藏结果标签，复制不成功)
+            toWarn && warn(toWarn);
 
             inspectEval("$$('" + selector + "').length", function (res, ex) {
 
@@ -267,9 +274,6 @@ function setResult(selector, toCopy) {
                     numSpan.innerHTML = res;
                 }
             });
-
-            // 拷贝结果
-            toCopy && copyToClipboard(false);
         }
     );
 }
