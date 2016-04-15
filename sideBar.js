@@ -16,8 +16,8 @@ var
      * @type {boolean}
      * @private
      */
-    //_debug = true;
-_debug = false;
+    _debug = true;
+//_debug = false;
 
 /**
  * 为改变选中的元素添加/删除事件监听器
@@ -138,7 +138,7 @@ function createTagAttr(attrs, clazz) {
 
     for (var i = 0; i < attrs.length; i++) {
 
-        li.appendChild(createPiece(attrs[i], i));
+        attrs[i] && li.appendChild(createPiece(attrs[i], i));
     }
 
     return li;

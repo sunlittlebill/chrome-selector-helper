@@ -352,7 +352,9 @@ function createSelector(modalArray) {
 
                 if (Array.isArray(modalArray[i][j])) {
                     for (var k = 0; k < modalArray[i][j].length; k++) {
-                        modalArray[i][j][k]["check"] = false;
+                        if (modalArray[i][j][k]){
+                            modalArray[i][j][k]["check"] = false;
+                        }
                     }
                 }
             }
