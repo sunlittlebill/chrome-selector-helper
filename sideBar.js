@@ -459,40 +459,6 @@ function copyToClipboard(toWarn) {
     toWarn && warn(msg);
 }
 
-// TODO /*************************************iframe 相关 **********************************************/
-//var iFrames = [];
-/**
- * 获取页面中的iframes
- */
-
-//function getIFrames() {
-//    var frames = $$("iframe[src]");
-//    for (var i = 0; i < frames.length; i++) {
-//
-//    }
-//}
-
-/**
- * 监测页面http请求，过滤出iframe
- */
-//chrome.devtools.network.getHAR(function (har) {
-//
-//});
-
-/**
- * 判断是否是同源iframe
- */
-//function isSameOriginFrame(domain, src) {
-//
-//}
-
-/**
- * 替换非同源frame
- */
-//function replaceFrame() {
-//
-//}
-
 // /*************************************其他**********************************************/
 /**
  * 注入交互script代码

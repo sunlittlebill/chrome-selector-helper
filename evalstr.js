@@ -341,18 +341,16 @@ function createSelector(modalArray) {
         selector = modalArray[0][2];
 
     for (var i = 1; i < modalArray.length; i++) {
-        var
-            cSelector = modalArray[i - 1][2],
-            pSelector = modalArray[i][2];
+        var pSelector = modalArray[i][2];
 
-        if (!siftTagSelector(pSelector, cSelector)) {
+        if (!siftTagSelector(pSelector, selector)) {
 
             isSibling = false;
             for (var j = 0; j < modalArray[i].length; j++) {
 
                 if (Array.isArray(modalArray[i][j])) {
                     for (var k = 0; k < modalArray[i][j].length; k++) {
-                        if (modalArray[i][j][k]){
+                        if (modalArray[i][j][k]) {
                             modalArray[i][j][k]["check"] = false;
                         }
                     }
@@ -450,7 +448,8 @@ function siftTagSelector(pSelector, cSelector) {
 
     try {
         cElements = document.querySelectorAll(cSelector);
-        pElements = document.querySelectorAll(pSelector + " > " + cSelector);
+        //pElements = document.querySelectorAll(pSelector + " > " + cSelector);
+        pElements = document.querySelectorAll(pSelector + " " + cSelector);
     } catch (e) {
         // 百度搜出的结果中会有 id=2这种标签
         // document.querySelectorAll("#2")会报错
@@ -462,6 +461,64 @@ function siftTagSelector(pSelector, cSelector) {
     }
 
     return pElements.length < cElements.length;
+}
+
+/**
+ * 实现jq中的:visible的类似功能
+ * @param tag {Element}
+ * @returns {boolean}
+ */
+function isVisible(tag) {
+
+    var
+        endTag = "html",
+        current = tag.parentNode;
+
+    while (current != null && endTag != current.tagName.toLowerCase()) {
+        if (current.style.display == "none") {
+            return false;
+        }
+        current = current.parentNode;
+    }
+    return true;
+}
+
+function isVisible2(selector) {
+
+    var
+        startTime = new Date().getTime(),
+        endTag = "html",
+        tags = document.querySelectorAll(selector),
+        result = {
+            count: tags.length,
+            vCount: 0,
+            nvCount: 0,
+            castTime: 0
+        };
+
+    for (var i = 0; i < tags.length; i++) {
+        var
+            flag = true,
+            current = tags[i];
+
+        while (current != null && endTag != current.tagName.toLowerCase()) {
+            if (current.style.display == "none") {
+                flag = false;
+                break;
+            }
+            current = current.parentNode;
+        }
+
+        if (flag) {
+            result.vCount++;
+        } else {
+            result.nvCount++;
+        }
+    }
+
+    //result.castTime = (new Date().getTime() - startTime) / 60;
+    result.castTime = new Date().getTime() - startTime;
+    return result;
 }
 
 evalstr = evalstr + doMain + " ";
