@@ -245,6 +245,7 @@ function clearContent(element) {
 function setResult(selector, toCopy) {
 
     var
+        supportJQ = true,
         selectorSpan = document.querySelector(".selector"),
         numSpan = document.querySelector(".selector-num");
 
@@ -253,12 +254,15 @@ function setResult(selector, toCopy) {
         function (result, isException) {
             var toWarn = "";
             if (isException) {
+                supportJQ = false;
                 toWarn = "注意：此页面不支持jQuery!";
-                selectorSpan.innerHTML = "$('" + selector + "');";
+                // selectorSpan.innerHTML = "$('" + selector + "');";
             } else {
                 debug("jQuery version " + result);
-                selectorSpan.innerHTML = "jQuery('" + selector + "');";
+                // selectorSpan.innerHTML = "jQuery('" + selector + "');";
             }
+
+            selectorSpan.innerHTML = "jQuery('" + selector + "');";
 
             // 拷贝结果
             toCopy && copyToClipboard(_debug);
@@ -338,7 +342,7 @@ var
      * bar item's class
      * @type {string[]}
      */
-    barItems = ["item-location", "item-location-auto", "item-location-all", "item-copy"],
+    barItems = ["item-location", "item-location-auto", "item-location-all", "item-hide", "item-copy"],
 
     /**
      * the tool bar
@@ -364,8 +368,12 @@ for (var i = 0; i < barItems.length; i++) {
         case 2:
             clickListener = markAll;
             break;
-        // copy result to clipboard
+        // hide tag
         case 3:
+            clickListener = hideTag;
+            break;
+        // copy result to clipboard
+        case 4:
             clickListener = copyToClipboard;
             break;
         default:
@@ -385,7 +393,7 @@ function locate() {
             inspectEval("(" + scrollToTag + "())");
             selectChange = false;
         });
-    }else{
+    } else {
         inspectEval("(" + scrollToTag + "())");
     }
 }
@@ -433,6 +441,34 @@ function markAll() {
             }
         }
         // scrollToTag();
+    }
+}
+
+/**
+ *
+ */
+function hideTag() {
+
+    inspectEval("(" + _hideOrShowTag + ")('" + selectorGlobal + "')");
+
+    function _hideOrShowTag(selector) {
+        var
+            key = "hide",
+            tags = document.querySelectorAll(selector);
+
+        for (var i = 0; i < tags.length; i++) {
+
+            var status = tags[i].dataset[key];
+
+            if(!status || status == 'false'){
+                tags[i].style.visibility = "hidden";
+                tags[i].dataset[key]  = true;
+
+            }else{
+                tags[i].style.visibility = "visible";
+                tags[i].dataset[key] = false;
+            }
+        }
     }
 }
 
