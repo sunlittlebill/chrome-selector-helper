@@ -342,7 +342,10 @@ var
      * bar item's class
      * @type {string[]}
      */
-    barItems = ["item-location", "item-location-auto", "item-location-all", "item-hide", "item-copy"],
+    barItems = [
+        "item-location", "item-location-auto", "item-location-all", "item-hide", "item-copy", /*"item-mark-links",*/
+        "item-load-jq"
+    ],
 
     /**
      * the tool bar
@@ -355,26 +358,32 @@ for (var i = 0; i < barItems.length; i++) {
         clickListener = null,
         item = bar.querySelector("." + barItems[i]);
 
-    switch (i) {
+    switch (barItems[i]) {
         // location button
-        case 0:
+        case "item-location":
             clickListener = locate;
             break;
         // auto-location button
-        case 1:
+        case "item-location-auto":
             clickListener = autoLocate;
             break;
         // mark all tag
-        case 2:
+        case "item-location-all":
             clickListener = markAll;
             break;
         // hide tag
-        case 3:
+        case "item-hide":
             clickListener = hideTag;
             break;
         // copy result to clipboard
-        case 4:
+        case "item-copy":
             clickListener = copyToClipboard;
+            break;
+        case "item-mark-links":
+            clickListener = copyToClipboard;
+            break;
+        case "item-load-jq":
+            clickListener = loadJQ;
             break;
         default:
             break;
@@ -460,11 +469,11 @@ function hideTag() {
 
             var status = tags[i].dataset[key];
 
-            if(!status || status == 'false'){
+            if (!status || status == 'false') {
                 tags[i].style.visibility = "hidden";
-                tags[i].dataset[key]  = true;
+                tags[i].dataset[key] = true;
 
-            }else{
+            } else {
                 tags[i].style.visibility = "visible";
                 tags[i].dataset[key] = false;
             }
@@ -495,6 +504,52 @@ function copyToClipboard(toWarn) {
     toWarn && warn(msg);
 }
 
+/**
+ * 给没有jq的页面中嵌入jq
+ */
+function loadJQ() {
+    inspectEval("jQuery.fn.jquery", function (result, isException) {
+
+        if (isException) { // 页面中没有jq
+
+            //var jqSrc = chrome.extension.getURL("jquery.min.js"); // TODO 行不通
+            var jqSrc = "https://g.alicdn.com/sj/lib/jquery.min.js";
+
+            inspectEval("(" + _loadJQ + ")('" + jqSrc + "')", function (res, isEx) {
+                if (!isEx) {
+                    var timer = window.setInterval(function () {
+                        inspectEval("jQuery.fn.jquery", function (r, ex) {
+                            if (!ex) {
+                                window.clearInterval(timer);
+                                warn("jQuery " + r + " 嵌入成功！", 2000);
+                            }
+                        })
+                    }, 500);
+                } else {
+                    warn("嵌入jQuery失败！");
+                }
+            })
+
+        } else {
+            warn("此页面中已有jQuery " + result + " ");
+        }
+    });
+
+    function _loadJQ(src) {
+        var script = document.createElement("script");
+        script.classList.add("load-jq");
+        script.src = src;
+        document.head.insertBefore(script, document.head.firstChild);
+
+        var timer = window.setInterval(function () {
+            if (window['jQuery']) {
+                window.clearInterval(timer);
+                return jQuery.fn.jquery;
+            }
+        }, 100)
+    }
+}
+
 // /*************************************其他**********************************************/
 /**
  * 注入交互script代码
@@ -523,7 +578,7 @@ function resize() {
 /**
  * nav bar 结果提示
  */
-function warn(msg) {
+function warn(msg, time) {
     var
         clazz = "active",
         resultSpan = document.querySelector(".result .selector"),
@@ -532,7 +587,8 @@ function warn(msg) {
     warnSpan.classList.add(clazz);
     resultSpan.classList.remove(clazz);
 
-    setTimeout(timer, 1000);
+    time = time || 1000;
+    setTimeout(timer, time);
 
     function timer() {
         warnSpan.innerText = "";
