@@ -343,7 +343,7 @@ var
      * @type {string[]}
      */
     barItems = [
-        "item-location", "item-location-auto", "item-location-all", "item-hide", "item-copy", /*"item-mark-links",*/
+        "item-location", "item-location-auto", "item-location-all", "item-copy", "item-hide", /*"item-mark-links",*/
         "item-load-jq"
     ],
 
@@ -531,7 +531,7 @@ function loadJQ() {
             })
 
         } else {
-            warn("此页面中已有jQuery " + result + " ");
+            warn("此页面中已有 jQuery " + result + " ");
         }
     });
 
