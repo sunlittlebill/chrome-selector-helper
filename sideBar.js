@@ -584,7 +584,8 @@ function pegging() {
         iSearch = tag("i", ['fa', 'fa-search'], {title: '下一个'}),
         iRight = tag("i", ['fa', 'fa-caret-right'], {title: "搜索 ( enter )"});
 
-    input.value = me.innerText == "无" ? "" : me.innerText;
+    input.value = history() ? history() : me.innerText == "无" ? "" : me.innerText;
+
     input.style.width = '250px';
     input.style.fontSize = '12px';
     input.style.fontFamily = 'monospace';
@@ -654,7 +655,12 @@ function pegging() {
             + getTagTop
             + _scrollToTag
             + " (" + _scrollToTag + ")(" + input.value.replace(");", "")
-                                                .replace("jQuery(", "") + "," + window['_s_index'] + ");"
+                                                .replace("jQuery(", "") + "," + window['_s_index'] + ");",
+            function (result, isException) {
+                if (isException) {
+                    warn("选择器错误或者页面不支持jQuery！");
+                }
+            }
         );
 
         function _scrollToTag(selector, index) {
@@ -685,19 +691,17 @@ function pegging() {
         inspectEval(getTagLeft
             + getTagTop
             + coverToEle
-            + " (" + _searchAll + ")(" + input.value.replace(");", "").replace("jQuery(", "") + ")",
+            + " (" + _searchAll + ")(" + input.value.replace(";", "") + ")",
             function (result, isException) {
                 if (isException) {
                     warn("选择器错误或者页面不支持jQuery！");
-                }else{
+                } else {
                     window['_s_length'] = Number.parseInt(result);
                 }
             }
         );
 
-        function _searchAll(selector) {
-            var tags = window["jQuery"] ? jQuery(selector) : $$(selector);
-
+        function _searchAll(tags) {
             for (var i = 0; i < tags.length; i++) {
                 if (i == 0) {
                     coverToEle(tags[i], true, 0);
@@ -719,10 +723,16 @@ function pegging() {
                 return _history[index];
             }
             return "";
-        } else {
-            if (!_history.includes(item) && new String(item).toString().trim()) {
+        } else if (item) {
+            if (!_history.includes(item)) {
                 _history[_history.length] = item;
                 window['_history'] = _history;
+            }
+        } else {
+            if (_history.length > 0) {
+                return _history[_history.length - 1];
+            } else {
+                return "";
             }
         }
     }
