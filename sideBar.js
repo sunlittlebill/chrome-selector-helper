@@ -571,8 +571,8 @@ function pegging() {
 
     window['_history'] = window['_history'] || [];
     window['_h_index'] = window['_h_index'] || 0; // 历史记录的当前序号
-    window['_s_index'] = 0; // 被编辑选择器选中元素定位用的当前序号
-    window['_s_length'] = 0; // 被编辑选择器选中元素定位用的当前序号
+    window['_s_index'] = -1; // 被编辑选择器选中元素定位用的当前序号
+    window['_s_length'] = -1; // 被编辑选择器选中元素定位用的当前序号
 
     /**
      * 创建查找工具栏
@@ -641,7 +641,6 @@ function pegging() {
 
     function go(flag) {
         if (flag == 1) {
-
             if (window['_s_index'] + 1 < window['_s_length']) {
                 window['_s_index']++;
             }
@@ -680,7 +679,8 @@ function pegging() {
     function goSearch() {
 
         history(null, input.value);
-        window['_s_index'] = 0;
+        window['_s_index'] = -1;
+        window['_s_length'] = 0;
 
         inspectEval(getTagLeft
             + getTagTop
