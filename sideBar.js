@@ -282,6 +282,9 @@ function setResult(selector, toCopy) {
     );
 }
 
+/**
+ * span {tagName, tagId, tagClass} 事件监听器
+ */
 function pieceListener() {
     var
         isChkCls = "isCheck",
@@ -297,6 +300,10 @@ function pieceListener() {
     setResult(selectorGlobal, false);
 }
 
+/**
+ * modal 到 selector 的转换
+ * @returns {string}
+ */
 function modalToSelector() {
     var
         indexCache = -1,
@@ -429,6 +436,9 @@ function autoLocate() {
     autoLocateSwitch = !autoLocateSwitch;
 }
 
+/**
+ * 标记所有当前选择器能查找到的元素
+ */
 function markAll() {
 
     inspectEval(
@@ -454,7 +464,7 @@ function markAll() {
 }
 
 /**
- *
+ * 隐藏标签
  */
 function hideTag() {
 
@@ -551,6 +561,200 @@ function loadJQ() {
 }
 
 // /*************************************其他**********************************************/
+
+/**
+ * 根据输入的选择器来查找和标记所能找到元素
+ * 注:要能够保存历史
+ */
+function pegging() {
+    var me = this;
+
+    window['_history'] = window['_history'] || [];
+    window['_h_index'] = window['_h_index'] || 0; // 历史记录的当前序号
+    window['_s_index'] = 0; // 被编辑选择器选中元素定位用的当前序号
+    window['_s_length'] = 0; // 被编辑选择器选中元素定位用的当前序号
+
+    /**
+     * 创建查找工具栏
+     * <input type="text"><i class="fa fa-caret-left"></i><i class="fa fa-search"></i><i class="fa fa-caret-right"></i>
+     */
+    var
+        input = tag("input", "pegging-editor", {title: '使用 alt + left/right 可查看历史记录'}),
+        iLeft = tag("i", ['fa', 'fa-caret-left'], {title: '上一个'}),
+        iSearch = tag("i", ['fa', 'fa-search'], {title: '下一个'}),
+        iRight = tag("i", ['fa', 'fa-caret-right'], {title: "搜索 ( enter )"});
+
+    input.value = me.innerText == "无" ? "" : me.innerText;
+    input.style.width = '250px';
+    input.style.fontSize = '12px';
+    input.style.fontFamily = 'monospace';
+
+    history(null, input.value);
+
+    input.addEventListener("keydown", function (event) {
+        if (event["keyCode"] == 13) {
+            goSearch();
+        } else if (event["altKey"] && event["keyCode"] == 37) {
+            input.value = history(current(-1));
+        } else if (event["altKey"] && event["keyCode"] == 39) {
+            input.value = history(current(1));
+        }
+    });
+
+    iLeft.addEventListener("click", function () {
+        go(-1);
+    });
+    iRight.addEventListener("click", function () {
+        go(1);
+    });
+
+    iSearch.addEventListener("click", goSearch.bind(input));
+
+    me.innerHTML = "";
+    me.appendChild(input);
+    me.appendChild(iSearch);
+
+    me.appendChild(iLeft);
+    me.appendChild(iRight);
+
+    input.focus();
+
+    function tag(name, clazz, attrs) {
+        var tag = document.createElement(name);
+
+        if (typeof clazz == "string") {
+            tag.classList.add(clazz);
+        } else if (Array.isArray(clazz)) {
+            for (var i = 0; i < clazz.length; i++) {
+                tag.classList.add(clazz[i]);
+            }
+        }
+
+        if (typeof attrs == "object") {
+            for (var attr in attrs) {
+                tag.setAttribute(attr, attrs[attr]);
+            }
+        }
+
+        return tag;
+    }
+
+    function go(flag) {
+        if (flag == 1) {
+
+            if (window['_s_index'] + 1 < window['_s_length']) {
+                window['_s_index']++;
+            }
+        } else {
+            if (window['_s_index'] > 0) {
+                window['_s_index']--;
+            }
+        }
+
+        inspectEval(getTagLeft
+            + getTagTop
+            + _scrollToTag
+            + " (" + _scrollToTag + ")(" + input.value.replace(");", "")
+                                                .replace("jQuery(", "") + "," + window['_s_index'] + ");"
+        );
+
+        function _scrollToTag(selector, index) {
+
+            var tag = window['jQuery'] ? jQuery(selector)[index] : $$(selector)[index];
+
+            var cover = document.getElementsByClassName("-slct");
+            for (var i = 0; i < cover.length; i++) {
+                if (i == index) {
+                    cover[i].style.backgroundColor = "green";
+                } else {
+                    cover[i].style.backgroundColor = "rgb(255, 0, 0)";
+                }
+            }
+            window.scrollTo(getTagLeft(tag), getTagTop(tag));
+        }
+    }
+
+    /**
+     * 标记所有当前选择器能查找到的元素
+     */
+    function goSearch() {
+
+        history(null, input.value);
+        window['_s_index'] = 0;
+
+        inspectEval(getTagLeft
+            + getTagTop
+            + coverToEle
+            + " (" + _searchAll + ")(" + input.value.replace(");", "").replace("jQuery(", "") + ")",
+            function (result, isException) {
+                if (isException) {
+                    warn("选择器错误或者页面不支持jQuery！");
+                }else{
+                    window['_s_length'] = Number.parseInt(result);
+                }
+            }
+        );
+
+        function _searchAll(selector) {
+            var tags = window["jQuery"] ? jQuery(selector) : $$(selector);
+
+            for (var i = 0; i < tags.length; i++) {
+                if (i == 0) {
+                    coverToEle(tags[i], true, 0);
+                } else {
+                    coverToEle(tags[i], false, i);
+                }
+            }
+
+            return tags.length;
+        }
+    }
+
+    function history(index, item) {
+
+        var _history = window['_history'];
+
+        if (index != null) {
+            if (index >= 0 && _history.length > 0) {
+                return _history[index];
+            }
+            return "";
+        } else {
+            if (!_history.includes(item) && new String(item).toString().trim()) {
+                _history[_history.length] = item;
+                window['_history'] = _history;
+            }
+        }
+    }
+
+    function current(flag) {
+        var current = window['_h_index'];
+
+        switch (flag) {
+            case -1 :
+                if (current - 1 >= 0) {
+                    current--;
+                }
+                break;
+            case 1:
+                if (current + 1 < window['_history'].length) {
+                    current++;
+                }
+                break;
+            default:
+                break;
+        }
+
+        return window['_h_index'] = current;
+    }
+}
+
+var
+    clickTag = document.querySelector(".click-to-edit"),
+    container = document.querySelector(".selector");
+
+clickTag.addEventListener("click", pegging.bind(container));
+
 /**
  * 注入交互script代码
  * @param evalStr
