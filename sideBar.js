@@ -579,26 +579,36 @@ function pegging() {
      * <input type="text"><i class="fa fa-caret-left"></i><i class="fa fa-search"></i><i class="fa fa-caret-right"></i>
      */
     var
-        input = tag("input", "pegging-editor", {title: '使用 alt + left/right 可查看历史记录'}),
+        input = tag("input", "pegging-editor", {title: '使用 alt + up/down 可查看历史记录'}),
         iLeft = tag("i", ['fa', 'fa-caret-left'], {title: '上一个'}),
         iSearch = tag("i", ['fa', 'fa-search'], {title: '下一个'}),
         iRight = tag("i", ['fa', 'fa-caret-right'], {title: "搜索 ( enter )"});
 
-    input.value = history() ? history() : me.innerText == "无" ? "" : me.innerText;
+    var str = me.innerText.trim();
+    input.value = (str != "无" && str != "") ? str : history() ? history() : "";
+
+    history(null, str);
 
     input.style.width = '250px';
     input.style.fontSize = '12px';
     input.style.fontFamily = 'monospace';
 
-    history(null, input.value);
-
     input.addEventListener("keydown", function (event) {
-        if (event["keyCode"] == 13) {
-            goSearch();
-        } else if (event["altKey"] && event["keyCode"] == 37) {
-            input.value = history(current(-1));
-        } else if (event["altKey"] && event["keyCode"] == 39) {
-            input.value = history(current(1));
+        console.log(event);
+        var _alt = event['altKey'];
+
+        switch (event["keyCode"]){
+            case 13:
+                goSearch();
+                break;
+            case 38:
+                _alt && (input.value = history(current(-1)));
+                break;
+            case 40:
+                _alt && (input.value = history(current(1)));
+                break;
+            default:
+                break;
         }
     });
 
@@ -696,7 +706,8 @@ function pegging() {
                 if (isException) {
                     warn("选择器错误或者页面不支持jQuery！");
                 } else {
-                    window['_s_length'] = Number.parseInt(result);
+
+                    document.querySelector(".selector-num").innerHTML = window['_s_length'] = Number.parseInt(result);
                 }
             }
         );
