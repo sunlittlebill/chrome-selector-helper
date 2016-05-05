@@ -527,14 +527,15 @@ function loadJQ() {
 
             inspectEval("(" + _loadJQ + ")('" + jqSrc + "')", function (res, isEx) {
                 if (!isEx) {
-                    var timer = window.setInterval(function () {
+                    var timer = window.setTimeout(function () {
                         inspectEval("jQuery.fn.jquery", function (r, ex) {
                             if (!ex) {
-                                window.clearInterval(timer);
                                 warn("jQuery " + r + " 嵌入成功！", 2000);
+                            }else{
+                                warn("该页面中无法嵌入jQuery！", 2000);
                             }
                         })
-                    }, 500);
+                    }, 1000);
                 } else {
                     warn("嵌入jQuery失败！");
                 }
