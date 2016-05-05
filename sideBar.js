@@ -527,14 +527,15 @@ function loadJQ() {
 
             inspectEval("(" + _loadJQ + ")('" + jqSrc + "')", function (res, isEx) {
                 if (!isEx) {
-                    var timer = window.setInterval(function () {
+                    window.setTimeout(function () {
                         inspectEval("jQuery.fn.jquery", function (r, ex) {
                             if (!ex) {
-                                window.clearInterval(timer);
                                 warn("jQuery " + r + " 嵌入成功！", 2000);
+                            }else{
+                                warn("该页面中无法嵌入jQuery！", 2000);
                             }
                         })
-                    }, 500);
+                    }, 1000);
                 } else {
                     warn("嵌入jQuery失败！");
                 }
@@ -579,32 +580,33 @@ function pegging() {
      * <input type="text"><i class="fa fa-caret-left"></i><i class="fa fa-search"></i><i class="fa fa-caret-right"></i>
      */
     var
-        input = tag("input", "pegging-editor", {title: '使用 alt + up/down 可查看历史记录'}),
+        input = tag("textarea", "pegging-editor", {
+            title: '使用 alt + up/down 可查看历史记录', style: "width: 296px;" +
+            " font-size: 12px; font-family: monospace; border: 1px solid silver"
+        }),
+
         iLeft = tag("i", ['fa', 'fa-caret-left'], {title: '上一个'}),
-        iSearch = tag("i", ['fa', 'fa-search'], {title: '下一个'}),
-        iRight = tag("i", ['fa', 'fa-caret-right'], {title: "搜索 ( enter )"});
+        iSearch = tag("i", ['fa', 'fa-search'], {title: '搜索 ( enter )'}),
+        iRight = tag("i", ['fa', 'fa-caret-right'], {title: "下一个"});
 
     var str = me.innerText.trim();
     input.value = (str != "无" && str != "") ? str : history() ? history() : "";
 
+    // 此次编辑的Selector存入history
     history(null, str);
-
-    input.style.width = '250px';
-    input.style.fontSize = '12px';
-    input.style.fontFamily = 'monospace';
 
     input.addEventListener("keydown", function (event) {
         console.log(event);
         var _alt = event['altKey'];
 
-        switch (event["keyCode"]){
-            case 13:
+        switch (event["keyCode"]) {
+            case 13: // 回车查询
                 goSearch();
                 break;
-            case 38:
+            case 38: // 前一次查询记录
                 _alt && (input.value = history(current(-1)));
                 break;
-            case 40:
+            case 40: // 后一次查询记录
                 _alt && (input.value = history(current(1)));
                 break;
             default:
@@ -612,24 +614,46 @@ function pegging() {
         }
     });
 
+    // 前一次查询记录
     iLeft.addEventListener("click", function () {
         go(-1);
     });
+    // 后一次查询记录
     iRight.addEventListener("click", function () {
         go(1);
     });
-
+    // 回车查询
     iSearch.addEventListener("click", goSearch.bind(input));
 
     me.innerHTML = "";
     me.appendChild(input);
-    me.appendChild(iSearch);
 
+    me.appendChild(tag("br"));
+    me.appendChild(iSearch);
     me.appendChild(iLeft);
     me.appendChild(iRight);
 
+    // 改变span.selector的显示模型
+    me.style.display = "block";
+    me.style.marginLeft = "46px";
+
+    me.appendChild(tag("br"));
+    calcPanel.innerHTML = input.value;
+
+    me.appendChild(createCalc());
+
     input.focus();
 
+    // 调整页面
+    resize();
+
+    /**
+     * 创建标签
+     * @param name
+     * @param clazz
+     * @param attrs
+     * @returns {Element}
+     */
     function tag(name, clazz, attrs) {
         var tag = document.createElement(name);
 
@@ -650,6 +674,10 @@ function pegging() {
         return tag;
     }
 
+    /**
+     * 翻查历史记录
+     * @param flag
+     */
     function go(flag) {
         if (flag == 1) {
             if (window['_s_index'] + 1 < window['_s_length']) {
@@ -725,6 +753,12 @@ function pegging() {
         }
     }
 
+    /**
+     * 历史记录
+     * @param index
+     * @param item
+     * @returns {*}
+     */
     function history(index, item) {
 
         var _history = window['_history'];
@@ -748,6 +782,11 @@ function pegging() {
         }
     }
 
+    /**
+     * 当前历史记录索引
+     * @param flag
+     * @returns {*}
+     */
     function current(flag) {
         var current = window['_h_index'];
 
@@ -767,6 +806,32 @@ function pegging() {
         }
 
         return window['_h_index'] = current;
+    }
+
+    /* TODO jQuery计算器面板 */
+    function createCalc() {
+        var
+            /**
+             * number => 个位数
+             * ctrl + number => 多位数
+             * @type {number[]}
+             */
+            digit = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            filtrate = ['eq', 'first', 'last', 'is', 'not', 'slice'],
+            display = ['remove', 'hide', 'show', 'hidden', 'visible'],
+            container = tag("div", [], {style: "width: 300px; height: 100px; border: 1px solid silver"});
+
+        return calcPanel;
+
+        function createDigit(){
+
+        }
+        function createFiltrate(){
+
+        }
+        function createDisplay(){
+
+        }
     }
 }
 
