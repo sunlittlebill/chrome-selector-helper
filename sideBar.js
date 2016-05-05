@@ -527,11 +527,11 @@ function loadJQ() {
 
             inspectEval("(" + _loadJQ + ")('" + jqSrc + "')", function (res, isEx) {
                 if (!isEx) {
-                    var timer = window.setTimeout(function () {
+                    window.setTimeout(function () {
                         inspectEval("jQuery.fn.jquery", function (r, ex) {
                             if (!ex) {
                                 warn("jQuery " + r + " 嵌入成功！", 2000);
-                            }else{
+                            } else {
                                 warn("该页面中无法嵌入jQuery！", 2000);
                             }
                         })
@@ -580,25 +580,22 @@ function pegging() {
      * <input type="text"><i class="fa fa-caret-left"></i><i class="fa fa-search"></i><i class="fa fa-caret-right"></i>
      */
     var
-        input = tag("input", "pegging-editor", {title: '使用 alt + up/down 可查看历史记录'}),
+        input = tag("input", "pegging-editor", {title: '使用 alt + up/down 可查看历史记录', style:"width: 250px; font-size:" +
+        " 12px; font-family: monospace"}),
         iLeft = tag("i", ['fa', 'fa-caret-left'], {title: '上一个'}),
-        iSearch = tag("i", ['fa', 'fa-search'], {title: '下一个'}),
-        iRight = tag("i", ['fa', 'fa-caret-right'], {title: "搜索 ( enter )"});
+        iSearch = tag("i", ['fa', 'fa-search'], {title: '搜索/执行 ( enter )'}),
+        iRight = tag("i", ['fa', 'fa-caret-right'], {title: "下一个"});
 
     var str = me.innerText.trim();
     input.value = (str != "无" && str != "") ? str : history() ? history() : "";
 
-    history(null, str);
-
-    input.style.width = '250px';
-    input.style.fontSize = '12px';
-    input.style.fontFamily = 'monospace';
+    history(null, input.value);
 
     input.addEventListener("keydown", function (event) {
         console.log(event);
         var _alt = event['altKey'];
 
-        switch (event["keyCode"]){
+        switch (event["keyCode"]) {
             case 13:
                 goSearch();
                 break;
