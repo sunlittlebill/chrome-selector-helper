@@ -55,7 +55,7 @@
             overflow-x: hidden;
         }
 
-        .content span.isCheck{
+        .content span.isCheck {
             background-color: white;
         }
 
@@ -114,15 +114,40 @@
             font-family: monospace;
             font-size: 12px;
         }
-        .result span.alert {
-            color: red;
+
+        .click-to-edit, .selector-num-label {
+            line-height: 23px;
         }
 
-        .result .selector .fa {
+        .result span.alert {
+            color: red;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .result .pegging-container .fa {
             width: 14px;
-            margin: 0 0 0 8px;
+            margin: 3px 8px 5px 0;
             font-size: 14px;
             color: #505050;
+        }
+
+        .pegging-container {
+            display: none;
+            margin-left: 46px;
+        }
+
+        .pegging-container span {
+            display: inline-block;
+            text-align: center;
+            padding: 1px;
+            margin: 2px;
+            font-family: monospace;
+            font-size: 12px;
+            width: 30px;
+            height: 20px;
+            border: 1px solid #d5d5d5;
+            background-color: #ECE7E7;
         }
     </style>
 </head>
@@ -140,6 +165,7 @@
 <div class="result">
     <label class="click-to-edit" title="点击进行编辑">选择器：</label><span class="selector active">无</span> <span
         class="alert"></span> <br/>
+    <div class="pegging-container"></div>
     <label class="selector-num-label">元素数：</label><span class="selector-num active">0</span>
 </div>
 <div class="content"></div>

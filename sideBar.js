@@ -247,7 +247,13 @@ function setResult(selector, toCopy) {
     var
         supportJQ = true,
         selectorSpan = document.querySelector(".selector"),
+        peggingContainer = document.querySelector(".pegging-container"),
         numSpan = document.querySelector(".selector-num");
+
+    selectorSpan.classList.add("active");
+
+    // 隐藏jQuery计算器
+    peggingContainer.style.display = 'none';
 
     inspectEval(
         "jQuery.fn.jquery",
@@ -531,7 +537,7 @@ function loadJQ() {
                         inspectEval("jQuery.fn.jquery", function (r, ex) {
                             if (!ex) {
                                 warn("jQuery " + r + " 嵌入成功！", 2000);
-                            }else{
+                            } else {
                                 warn("该页面中无法嵌入jQuery！", 2000);
                             }
                         })
@@ -568,7 +574,15 @@ function loadJQ() {
  * 注:要能够保存历史
  */
 function pegging() {
-    var me = this;
+    var
+        me = this,
+        selector = document.querySelector(".selector");
+
+    //隐藏 .selector
+    selector.classList.remove("active");
+
+    me.style.display = 'block';
+    me.innerHTML = '';
 
     window['_history'] = window['_history'] || [];
     window['_h_index'] = window['_h_index'] || 0; // 历史记录的当前序号
@@ -580,20 +594,22 @@ function pegging() {
      * <input type="text"><i class="fa fa-caret-left"></i><i class="fa fa-search"></i><i class="fa fa-caret-right"></i>
      */
     var
-        input = tag("textarea", "pegging-editor", {
-            title: '使用 alt + up/down 可查看历史记录', style: "width: 296px;" +
-            " font-size: 12px; font-family: monospace; border: 1px solid silver"
-        }),
+        input = tag("textarea", "pegging-editor",
+            {
+                title: '使用 alt + up/down 可查看历史记录',
+                style: "width: 410px;" + " font-size: 12px; font-family: monospace; border: 1px solid silver"
+            }
+        ),
 
         iLeft = tag("i", ['fa', 'fa-caret-left'], {title: '上一个'}),
-        iSearch = tag("i", ['fa', 'fa-search'], {title: '搜索 ( enter )'}),
+        iSearch = tag("i", ['fa', 'fa-search'], {title: '搜索/执行jQuery语句 ( enter )'}),
         iRight = tag("i", ['fa', 'fa-caret-right'], {title: "下一个"});
 
-    var str = me.innerText.trim();
+    var str = selector.innerText.trim();
     input.value = (str != "无" && str != "") ? str : history() ? history() : "";
 
     // 此次编辑的Selector存入history
-    history(null, str);
+    history(null, input.value);
 
     input.addEventListener("keydown", function (event) {
         console.log(event);
@@ -625,27 +641,19 @@ function pegging() {
     // 回车查询
     iSearch.addEventListener("click", goSearch.bind(input));
 
-    me.innerHTML = "";
     me.appendChild(input);
+
+    // 调整页面
+    resize();
 
     me.appendChild(tag("br"));
     me.appendChild(iSearch);
     me.appendChild(iLeft);
     me.appendChild(iRight);
 
-    // 改变span.selector的显示模型
-    me.style.display = "block";
-    me.style.marginLeft = "46px";
-
-    me.appendChild(tag("br"));
-    calcPanel.innerHTML = input.value;
-
     me.appendChild(createCalc());
 
     input.focus();
-
-    // 调整页面
-    resize();
 
     /**
      * 创建标签
@@ -819,25 +827,33 @@ function pegging() {
             digit = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
             filtrate = ['eq', 'first', 'last', 'is', 'not', 'slice'],
             display = ['remove', 'hide', 'show', 'hidden', 'visible'],
-            container = tag("div", [], {style: "width: 300px; height: 100px; border: 1px solid silver"});
+            container = tag("div", [], {style: "/*width: 300px; */height: 100px;/* border: 1px solid silver*/"});
 
-        return calcPanel;
+        var line = createLine();
 
-        function createDigit(){
-
+        line.appendChild(createBtn("-", null, {style: 'margin-left: 0'})); // 负号
+        for (var i = 0; i < digit.length; i++) {
+            line.appendChild(createBtn(digit[i]));
         }
-        function createFiltrate(){
+        container.appendChild(line);
+        return container;
 
+        function createBtn(value, clazz, attrs) {
+            var btn = tag("span", clazz || [], $extends(attrs, {}));
+
+            btn.innerText = value;
+            return btn;
         }
-        function createDisplay(){
 
+        function createLine() {
+            return tag("div", [], {style: 'width: 100%;height: 35px;'});
         }
     }
 }
 
 var
     clickTag = document.querySelector(".click-to-edit"),
-    container = document.querySelector(".selector");
+    container = document.querySelector(".pegging-container");
 
 clickTag.addEventListener("click", pegging.bind(container));
 
@@ -872,7 +888,9 @@ function warn(msg, time) {
     var
         clazz = "active",
         resultSpan = document.querySelector(".result .selector"),
-        warnSpan = document.querySelector(".result .alert");
+        warnSpan = document.querySelector(".result .alert"),
+        isActive = resultSpan.classList.contains(clazz);
+
     warnSpan.innerText = msg;
     warnSpan.classList.add(clazz);
     resultSpan.classList.remove(clazz);
@@ -883,8 +901,24 @@ function warn(msg, time) {
     function timer() {
         warnSpan.innerText = "";
         warnSpan.classList.remove(clazz);
-        resultSpan.classList.add(clazz);
+        isActive && resultSpan.classList.add(clazz);
     }
+}
+
+/**
+ * 对象继承
+ */
+function $extends(from, to) {
+
+    //if(!from || !to || Array.isArray(from) || Array.isArray(to) || typeof from != typeof to){
+    //    return to;
+    //}
+    for (var n in from) {
+        if (from.hasOwnProperty(n)) {
+            to[n] = from[n];
+        }
+    }
+    return to;
 }
 
 /**
