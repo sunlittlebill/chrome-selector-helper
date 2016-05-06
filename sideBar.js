@@ -612,7 +612,6 @@ function pegging() {
     history(null, input.value);
 
     input.addEventListener("keydown", function (event) {
-        console.log(event);
         var _alt = event['altKey'];
 
         switch (event["keyCode"]) {
@@ -632,11 +631,11 @@ function pegging() {
 
     // 前一次查询记录
     iLeft.addEventListener("click", function () {
-        go(-1);
+        input.value && go(-1);
     });
     // 后一次查询记录
     iRight.addEventListener("click", function () {
-        go(1);
+        input.value && go(1);
     });
     // 回车查询
     iSearch.addEventListener("click", goSearch.bind(input));
@@ -729,6 +728,9 @@ function pegging() {
      * 标记所有当前选择器能查找到的元素
      */
     function goSearch() {
+        if (!input.value) {
+            return;
+        }
 
         history(null, input.value);
         window['_s_index'] = -1;
@@ -825,28 +827,106 @@ function pegging() {
              * @type {number[]}
              */
             digit = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-            filtrate = ['eq', 'first', 'last', 'is', 'not', 'slice'],
-            display = ['remove', 'hide', 'show', 'hidden', 'visible'],
-            container = tag("div", [], {style: "/*width: 300px; */height: 100px;/* border: 1px solid silver*/"});
+            filtrate = [
+                ':eq()', ':gt()', ':lt()', ':even', ':odd', ':first', ':last', ':not()', ':has()', ':hidden',
+                ':visible'
+            ],
 
-        var line = createLine();
+            simpleHandler = [
+                '.remove()', '.eq()', '.first()', '.last()', '.filter()', '.slice()', '.children()',
+                '.find()', '.parent()', '.hide()', '.show()'
+            ],
 
-        line.appendChild(createBtn("-", null, {style: 'margin-left: 0'})); // 负号
+        // TODO
+            eventNames = ['click', 'dblclick'],
+
+            container = tag("div", [], {style: "/*width: 300px; height: 100px; border: 1px solid silver*/"});
+
+        container.appendChild(createLine(['operate-container'], {
+            style: 'border: 1px dashed silver; width: 412px; min-height:35px;' +
+            ' margin-bottom: 8px;'
+        }));
+
+        // 数字
+        var digitLine = createLine();
+        digitLine.appendChild(createBtn("-", null, {/*style: 'margin-left: 0'*/})); // 负号
         for (var i = 0; i < digit.length; i++) {
-            line.appendChild(createBtn(digit[i]));
+            var btn = createBtn(digit[i]);
+            btn.addEventListener('click', addToOperate);
+            digitLine.appendChild(btn);
         }
-        container.appendChild(line);
+        container.appendChild(digitLine);
+
+        // 筛选
+        var filtrateLine = createLine();
+        for (i = 0; i < filtrate.length; i++) {
+            filtrateLine.appendChild(createBtn(filtrate[i]));
+        }
+        container.appendChild(filtrateLine);
+
+        // 常用方法
+        var simpleHandlerLine = createLine();
+        for (i = 0; i < simpleHandler.length; i++) {
+            simpleHandlerLine.appendChild(createBtn(simpleHandler[i]));
+        }
+        container.appendChild(simpleHandlerLine);
+
+        // 事件
+        var eventNamesLine = createLine();
+        for (i = 0; i < eventNames.length; i++) {
+            eventNamesLine.appendChild(createBtn(eventNames[i]));
+        }
+        container.appendChild(eventNamesLine);
+
+        container.appendChild(tag("br")); // 调整与下方区域的间隔
         return container;
 
+        /**
+         *
+         * @param value
+         * @param clazz
+         * @param attrs
+         * @returns {Element}
+         */
         function createBtn(value, clazz, attrs) {
             var btn = tag("span", clazz || [], $extends(attrs, {}));
-
             btn.innerText = value;
             return btn;
         }
 
-        function createLine() {
-            return tag("div", [], {style: 'width: 100%;height: 35px;'});
+        /**
+         *
+         * @param clazz
+         * @param attrs
+         * @returns {Element}
+         */
+        function createLine(clazz, attrs) {
+            var _clazz = ['line'];
+            return tag("div", _clazz.concat(clazz), $extends(attrs, {}));
+        }
+
+        function addToOperate() {
+            var
+                me = this,
+                area = document.querySelector(".operate-container"),
+                btn = createBtn(me.innerText, ['operate'], {style: 'margin: 2px'}),
+                closeBtn = tag("i", [
+                    'fa', 'fa-close'
+                ], {style: 'font-size: 10px;width: auto;float: right;margin-top: -3px;margin-right: -1px;color: #505050;'});
+
+            // 删除按钮
+            closeBtn.addEventListener('click', function () {
+                btn.remove();
+            });
+
+            btn.addEventListener('click', function (event) {
+                if(event['ctrlKey']){
+                    btn.classList.toggle('selected');
+                }
+            });
+
+            btn.appendChild(closeBtn);
+            area.appendChild(btn);
         }
     }
 }
