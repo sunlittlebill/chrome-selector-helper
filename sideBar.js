@@ -16,7 +16,7 @@ var
      * @type {boolean}
      * @private
      */
-    _debug = true;
+    _debug = true; // _debug && console.debug();
 //_debug = false;
 
 /**
@@ -40,7 +40,9 @@ function selectionChangedListener() {
         if (!result) {
             return;
         }
-        debug(result);
+
+        _debug && console.debug(result);
+
         var content = document.getElementsByClassName("content")[0];
 
         modalArrGlobal = result["modal"];
@@ -86,7 +88,7 @@ function createTagModal(modalArr, content) {
 /**
  * 创建给定元素信息的行
  * @param modalArr {Array}
- * @param index {number}
+ * @param modalArrIndex {number}
  * @returns {Element}
  */
 function createTagLine(modalArr, modalArrIndex) {
@@ -147,7 +149,9 @@ function createTagAttr(attrs, clazz) {
 /**
  * 创建一个tag属性的span标签
  * @param item {string}
- * @param index {number}
+ * @param spanIndex {number}
+ * @param modalIndex {number}
+ * @param modalArrIndex {number}
  * @returns {Element}
  */
 function createPiece(item, spanIndex, modalIndex, modalArrIndex) {
@@ -247,13 +251,13 @@ function setResult(selector, toCopy) {
     var
         supportJQ = true,
         selectorSpan = document.querySelector(".selector"),
-        peggingContainer = document.querySelector(".pegging-container"),
+        calcContainer = document.querySelector(".calc-container"),
         numSpan = document.querySelector(".selector-num");
 
     selectorSpan.classList.add("active");
 
     // 隐藏jQuery计算器
-    peggingContainer.style.display = 'none';
+    calcContainer.style.display = 'none';
 
     inspectEval(
         "jQuery.fn.jquery",
@@ -264,7 +268,9 @@ function setResult(selector, toCopy) {
                 toWarn = "注意：此页面不支持jQuery!";
                 // selectorSpan.innerHTML = "$('" + selector + "');";
             } else {
-                debug("jQuery version " + result);
+
+                _debug && console.debug("jQuery version " + result);
+
                 // selectorSpan.innerHTML = "jQuery('" + selector + "');";
             }
 
@@ -298,7 +304,9 @@ function pieceListener() {
         isCheck = this.classList.contains(isChkCls);
 
     this.classList.toggle(isChkCls);
-    debug(isCheck);
+
+    _debug && console.debug(isCheck);
+
     modalArrGlobal[index[0]][index[1]][index[2]]["check"] = !isCheck;
 
     selectorGlobal = modalToSelector();
@@ -356,7 +364,7 @@ var
      * @type {string[]}
      */
     barItems = [
-        "item-location", "item-location-auto", "item-location-all", "item-copy", "item-hide", /*"item-mark-links",*/
+        "item-location", "item-location-auto", "item-location-all", "item-copy", "item-hide", "item-mark-links",
         "item-load-jq"
     ],
 
@@ -393,7 +401,7 @@ for (var i = 0; i < barItems.length; i++) {
             clickListener = copyToClipboard;
             break;
         case "item-mark-links":
-            clickListener = copyToClipboard;
+            clickListener = markAllLinks;
             break;
         case "item-load-jq":
             clickListener = loadJQ;
@@ -404,12 +412,17 @@ for (var i = 0; i < barItems.length; i++) {
     item.addEventListener("click", clickListener.bind(item));
 }
 
+// jQuery计算器
+var
+    clickTag = document.querySelector(".click-to-edit"),
+    container = document.querySelector(".calc-container");
+
+clickTag.addEventListener("click", calc.bind(container));
+
 /**
  * 定位当前选中的元素(点击后)
  */
 function locate() {
-    debug("locate");
-
     if (selectChange) {
         inspectEval("inspect(document.querySelector('" + selectorGlobal + "'))", function () {
             inspectEval("(" + scrollToTag + "())");
@@ -424,7 +437,6 @@ function locate() {
  * 自动定位当前选中的元素(可开关)
  */
 function autoLocate() {
-    debug("autoLocate");
 
     var
         switchOff = "fa-toggle-off",
@@ -504,12 +516,18 @@ function copyToClipboard(toWarn) {
     var
         msg = "",
         range = document.createRange(),
-        span = document.querySelector(".result > .selector");
+        span = document.querySelector(".result > .selector.active"),
+        input = document.querySelector(".calc-editor");
 
-    // 针对没有select()方法的元素
-    range.selectNode(span);
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
+    if (span) {
+
+        // 针对没有select()方法的元素
+        range.selectNode(span);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+    } else {
+        input.select();
+    }
 
     try {
         msg = document.execCommand("copy") ? "拷贝成功!" : "拷贝失败!";
@@ -518,6 +536,30 @@ function copyToClipboard(toWarn) {
     }
     window.getSelection().removeAllRanges();
     toWarn && warn(msg);
+}
+
+/**
+ * TODO
+ * 标记所有的可点击链接
+ * 判断是否有jq，没有则提示要求注入
+ * cursor:pointer + a[href]
+ * visible:true
+ * 对于overflow:hidden的(例如焦点图)查找其container
+ */
+function markAllLinks() {
+    inspectEval("jQuery.fn.jquery", function (res, isEx) {
+        if (isEx) {
+            warn("页面中缺少jQuery，请先注入jQuery！", 1500);
+        } else {
+            warn("TODO 此功能未完成！", 1000);
+        }
+    });
+
+    function searchLinks() {
+        var
+            visibleLinks = jQuery(document.links).filter("[href]:visible");
+    }
+
 }
 
 /**
@@ -567,16 +609,15 @@ function loadJQ() {
     }
 }
 
-// /*************************************其他**********************************************/
-
 /**
  * 根据输入的选择器来查找和标记所能找到元素
  * 注:要能够保存历史
  */
-function pegging() {
+function calc() {
     var
         me = this,
-        selector = document.querySelector(".selector");
+        selector = document.querySelector(".selector"),
+        operatorArr = [];
 
     //隐藏 .selector
     selector.classList.remove("active");
@@ -594,7 +635,7 @@ function pegging() {
      * <input type="text"><i class="fa fa-caret-left"></i><i class="fa fa-search"></i><i class="fa fa-caret-right"></i>
      */
     var
-        input = tag("textarea", "pegging-editor",
+        input = tag("textarea", "calc-editor",
             {
                 title: '使用 alt + up/down 可查看历史记录',
                 style: "width: 410px;" + " font-size: 12px; font-family: monospace; border: 1px solid silver"
@@ -842,25 +883,33 @@ function pegging() {
 
             container = tag("div", [], {style: "/*width: 300px; height: 100px; border: 1px solid silver*/"});
 
-        container.appendChild(createLine(['operate-container'], {
+        var operatorPanel = createLine(['operate-container'], {
             style: 'border: 1px dashed silver; width: 412px; min-height:35px;' +
             ' margin-bottom: 8px;'
-        }));
+        });
+
+        // clear all operator
+        operatorPanel.appendChild(clearOperators());
+        container.appendChild(operatorPanel);
 
         // 数字
-        var digitLine = createLine();
-        digitLine.appendChild(createBtn("-", null, {/*style: 'margin-left: 0'*/})); // 负号
+        var digitLine = createLine(['digit']);
         for (var i = 0; i < digit.length; i++) {
-            var btn = createBtn(digit[i]);
-            btn.addEventListener('click', addToOperate);
+            var btn = createBtn(digit[i], ['click']);
+            btn.addEventListener('click', inputNum);
             digitLine.appendChild(btn);
         }
+        var ok = createBtn("确定", ['click']);
+        ok.addEventListener("click", evalNum);
+        digitLine.appendChild(ok);
         container.appendChild(digitLine);
 
         // 筛选
         var filtrateLine = createLine();
         for (i = 0; i < filtrate.length; i++) {
-            filtrateLine.appendChild(createBtn(filtrate[i]));
+            var btn = createBtn(filtrate[i]);
+            btn.addEventListener("click", addToOperate);
+            filtrateLine.appendChild(btn);
         }
         container.appendChild(filtrateLine);
 
@@ -902,40 +951,109 @@ function pegging() {
          */
         function createLine(clazz, attrs) {
             var _clazz = ['line'];
-            return tag("div", _clazz.concat(clazz), $extends(attrs, {}));
+            if (clazz) {
+                _clazz = _clazz.concat(clazz);
+            }
+            _debug && console.debug(_clazz);
+            return tag("div", _clazz, $extends(attrs, {}));
         }
 
+        /**
+         *
+         */
         function addToOperate() {
             var
                 me = this,
                 area = document.querySelector(".operate-container"),
-                btn = createBtn(me.innerText, ['operate'], {style: 'margin: 2px'}),
+                btn = createBtn(me.innerText, ['operate', 'selected'], {style: 'margin: 2px'}),
                 closeBtn = tag("i", [
                     'fa', 'fa-close'
-                ], {style: 'font-size: 10px;width: auto;float: right;margin-top: -3px;margin-right: -1px;color: #505050;'});
+                ], {style: 'font-size: 10px;width: auto;float: right;margin-top: -3px;margin-right: -1px;color: #6F6F6F;'});
 
             // 删除按钮
             closeBtn.addEventListener('click', function () {
                 btn.remove();
             });
 
-            btn.addEventListener('click', function (event) {
-                if(event['ctrlKey']){
-                    btn.classList.toggle('selected');
+            var btns = area.querySelectorAll(".selected");
+            for (var i = 0; i < btns.length; i++) {
+                btns[i].classList.remove("selected");
+            }
+
+            btn.addEventListener('click', function () {
+                var
+                    isSelected = this.classList.contains("selected"),
+                    _btns = area.querySelectorAll(".selected");
+
+                for (i = 0; i < _btns.length; i++) {
+                    _btns[i].classList.remove("selected");
+                }
+
+                if (btn.isSameNode(this)) {
+                    if(isSelected){
+                        this.classList.remove("selected");
+                    }else{
+                        this.classList.add("selected");
+                    }
+
+                } else {
+                    this.classList.add("selected");
                 }
             });
 
             btn.appendChild(closeBtn);
             area.appendChild(btn);
         }
+
+        /**
+         *
+         * @returns {Element}
+         */
+        function clearOperators() {
+            var btn = tag("i", ['fa', 'fa-close'], {style: 'float:right;margin: 0;color: #6F6F6F;'});
+            btn.addEventListener("click", function () {
+                operatorPanel.innerHTML = "";
+                operatorPanel.appendChild(btn);
+                operatorArr = [];
+            });
+            return btn;
+        }
+
+        function inputNum(event) {
+            this.classList.toggle("selected");
+        }
+
+        function evalNum() {
+            var nums = document.querySelectorAll(".line.digit span.selected");
+            if (!nums) {
+                return null;
+            }
+            var result = "";
+            for (var i = 0; i < nums.length; i++) {
+                result = result + nums[i].innerHTML;
+                nums[i].classList.remove("selected");
+            }
+
+            var
+                num = parseInt(result),
+                operator = document.querySelector(".operate.selected");
+
+            if (!isNaN(num)) {
+                var numArr = operator.dataset['num'] || [];
+                if (numArr.length > 0) {
+                    numArr = numArr.split(',');
+                }
+                numArr.push(num);
+                operator.dataset['num'] = numArr;
+            }
+        }
+
+        function evalOperator() {
+
+        }
     }
 }
-
-var
-    clickTag = document.querySelector(".click-to-edit"),
-    container = document.querySelector(".pegging-container");
-
-clickTag.addEventListener("click", pegging.bind(container));
+// /*************************************其他**********************************************/
 
 /**
  * 注入交互script代码
@@ -946,7 +1064,9 @@ function inspectEval(evalStr, callback) {
     chrome.devtools.inspectedWindow.eval(
         evalStr,
         function () {
-            debug(arguments);
+
+            _debug && console.debug(arguments);
+
             if (typeof callback === "function") {
                 callback.apply(callback, arguments);
             }
@@ -990,20 +1110,13 @@ function warn(msg, time) {
  */
 function $extends(from, to) {
 
-    //if(!from || !to || Array.isArray(from) || Array.isArray(to) || typeof from != typeof to){
-    //    return to;
-    //}
+    if (!from || !to || Array.isArray(from) || Array.isArray(to) || typeof from != typeof to) {
+        return to;
+    }
     for (var n in from) {
         if (from.hasOwnProperty(n)) {
             to[n] = from[n];
         }
     }
     return to;
-}
-
-/**
- * 调试
- */
-function debug() {
-    _debug && console.debug.apply(console, arguments);
 }

@@ -125,19 +125,19 @@
             font-size: 12px;
         }
 
-        .result .pegging-container .fa {
+        .result .calc-container .fa {
             width: 14px;
             margin: 5px 8px 8px 0;
             font-size: 14px;
             color: #505050;
         }
 
-        .pegging-container {
+        .calc-container {
             display: none;
             margin-left: 46px;
         }
 
-        .pegging-container span {
+        .calc-container span {
             display: inline-block;
             text-align: center;
             padding: 1px;
@@ -151,7 +151,7 @@
             cursor: default;
         }
 
-        .pegging-container .line {
+        .calc-container .line {
             width: 100%;
             margin-bottom: 10px;
             /*min-height: 35px;*/
@@ -165,6 +165,13 @@
             background-color: white;
             border-style: solid;
         }
+        .line span.click{
+            cursor: pointer;
+        }
+        .line span.selected{
+            background-color: white;
+        }
+
     </style>
 </head>
 <body>
@@ -182,7 +189,7 @@
     <label class="selector-num-label">元素数：</label><span class="selector-num active">0</span> <br/>
     <label class="click-to-edit" title="点击进行编辑">选择器：</label><span class="selector active">无</span> <span
         class="alert"></span> <br/>
-    <div class="pegging-container"></div>
+    <div class="calc-container"></div>
 </div>
 <br/>
 <div class="content"></div>
