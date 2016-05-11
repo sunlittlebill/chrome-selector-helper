@@ -415,9 +415,9 @@ for (var i = 0; i < barItems.length; i++) {
 // jQuery计算器
 var
     clickTag = document.querySelector(".click-to-edit"),
-    container = document.querySelector(".calc-container");
+    calcContainer = document.querySelector(".calc-container");
 
-clickTag.addEventListener("click", calc.bind(container));
+clickTag.addEventListener("click", calc.bind(calcContainer));
 
 /**
  * 定位当前选中的元素(点击后)
@@ -551,7 +551,7 @@ function markAllLinks() {
         if (isEx) {
             warn("页面中缺少jQuery，请先注入jQuery！", 1500);
         } else {
-            warn("TODO 此功能未完成！", 1000);
+            warn("TODO 此功能尚未完成！", 1000);
         }
     });
 
@@ -616,8 +616,7 @@ function loadJQ() {
 function calc() {
     var
         me = this,
-        selector = document.querySelector(".selector"),
-        operatorArr = [];
+        selector = document.querySelector(".selector");
 
     //隐藏 .selector
     selector.classList.remove("active");
@@ -654,10 +653,13 @@ function calc() {
 
     input.addEventListener("keydown", function (event) {
         var _alt = event['altKey'];
-
+        _debug && console.debug(event);
         switch (event["keyCode"]) {
             case 13: // 回车查询
-                goSearch();
+                if (!event['ctrlKey']) {
+                    goSearch();
+                    event.preventDefault();
+                }
                 break;
             case 38: // 前一次查询记录
                 _alt && (input.value = history(current(-1)));
@@ -692,6 +694,10 @@ function calc() {
     me.appendChild(iRight);
 
     me.appendChild(createCalc());
+
+    input.addEventListener('focus', function () {
+        resetOperatorStatus();
+    });
 
     input.focus();
 
@@ -862,20 +868,31 @@ function calc() {
     /* TODO jQuery计算器面板 */
     function createCalc() {
         var
-            /**
-             * number => 个位数
-             * ctrl + number => 多位数
-             * @type {number[]}
-             */
-            digit = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
             filtrate = [
-                ':eq()', ':gt()', ':lt()', ':even', ':odd', ':first', ':last', ':not()', ':has()', ':hidden',
-                ':visible'
+                {name: ':eq()', hasArgs: true},
+                {name: ':gt()', hasArgs: true},
+                {name: ':lt()', hasArgs: true},
+                {name: ':even', hasArgs: false},
+                {name: ':odd', hasArgs: false},
+                {name: ':first', hasArgs: false},
+                {name: ':last', hasArgs: false},
+                {name: ':not()', hasArgs: true},
+                {name: ':has()', hasArgs: true},
+                {name: ':hidden', hasArgs: false},
+                {name: ':visible', hasArgs: false}
             ],
-
             simpleHandler = [
-                '.remove()', '.eq()', '.first()', '.last()', '.filter()', '.slice()', '.children()',
-                '.find()', '.parent()', '.hide()', '.show()'
+                {name: '.remove()', hasArgs: true},
+                {name: '.eq()', hasArgs: true},
+                {name: '.first()', hasArgs: true},
+                {name: '.last()', hasArgs: true},
+                {name: '.filter()', hasArgs: true},
+                {name: '.slice()', hasArgs: true},
+                {name: '.children()', hasArgs: true},
+                {name: '.find()', hasArgs: true},
+                {name: '.parent()', hasArgs: true},
+                {name: '.hide()', hasArgs: true},
+                {name: '.show()', hasArgs: true}
             ],
 
         // TODO
@@ -892,22 +909,11 @@ function calc() {
         operatorPanel.appendChild(clearOperators());
         container.appendChild(operatorPanel);
 
-        // 数字
-        var digitLine = createLine(['digit']);
-        for (var i = 0; i < digit.length; i++) {
-            var btn = createBtn(digit[i], ['click']);
-            btn.addEventListener('click', inputNum);
-            digitLine.appendChild(btn);
-        }
-        var ok = createBtn("确定", ['click']);
-        ok.addEventListener("click", evalNum);
-        digitLine.appendChild(ok);
-        container.appendChild(digitLine);
-
         // 筛选
         var filtrateLine = createLine();
-        for (i = 0; i < filtrate.length; i++) {
-            var btn = createBtn(filtrate[i]);
+        for (var i = 0; i < filtrate.length; i++) {
+            var btn = createBtn(filtrate[i]['name']);
+            btn.dataset['hasArgs'] = filtrate[i]['hasArgs'];
             btn.addEventListener("click", addToOperate);
             filtrateLine.appendChild(btn);
         }
@@ -916,7 +922,10 @@ function calc() {
         // 常用方法
         var simpleHandlerLine = createLine();
         for (i = 0; i < simpleHandler.length; i++) {
-            simpleHandlerLine.appendChild(createBtn(simpleHandler[i]));
+            btn = createBtn(simpleHandler[i]['name']);
+            btn.dataset['hasArgs'] = simpleHandler[i]['hasArgs'];
+            btn.addEventListener("click", addToOperate);
+            simpleHandlerLine.appendChild(btn);
         }
         container.appendChild(simpleHandlerLine);
 
@@ -965,15 +974,9 @@ function calc() {
             var
                 me = this,
                 area = document.querySelector(".operate-container"),
-                btn = createBtn(me.innerText, ['operate', 'selected'], {style: 'margin: 2px'}),
-                closeBtn = tag("i", [
-                    'fa', 'fa-close'
-                ], {style: 'font-size: 10px;width: auto;float: right;margin-top: -3px;margin-right: -1px;color: #6F6F6F;'});
-
-            // 删除按钮
-            closeBtn.addEventListener('click', function () {
-                btn.remove();
-            });
+                btn = createBtn(me.innerText, ['operate'], {style: 'margin: 2px'}),
+                closeBtn = createCloseBtn(btn),
+                hasArgs = me.dataset['hasArgs'];
 
             var btns = area.querySelectorAll(".selected");
             for (var i = 0; i < btns.length; i++) {
@@ -985,28 +988,38 @@ function calc() {
                     isSelected = this.classList.contains("selected"),
                     _btns = area.querySelectorAll(".selected");
 
+                destroyInput();
+
                 for (i = 0; i < _btns.length; i++) {
                     _btns[i].classList.remove("selected");
+
                 }
 
                 if (btn.isSameNode(this)) {
-                    if(isSelected){
+                    if (isSelected) {
                         this.classList.remove("selected");
-                    }else{
+                    } else {
                         this.classList.add("selected");
+                        initInput();
                     }
 
                 } else {
                     this.classList.add("selected");
+                    initInput();
                 }
             });
 
             btn.appendChild(closeBtn);
             area.appendChild(btn);
+
+            if (hasArgs == 'true') {
+                // 触发一次click事件：+selected、触发argsInput
+                btn.click();
+            }
         }
 
         /**
-         *
+         * 清空所有的操作对象
          * @returns {Element}
          */
         function clearOperators() {
@@ -1014,44 +1027,183 @@ function calc() {
             btn.addEventListener("click", function () {
                 operatorPanel.innerHTML = "";
                 operatorPanel.appendChild(btn);
-                operatorArr = [];
             });
             return btn;
         }
+    }
 
-        function inputNum(event) {
-            this.classList.toggle("selected");
-        }
+    /**
+     * 删除按钮
+     * @param target
+     * @returns {Element}
+     */
+    function createCloseBtn(target) {
+        var btn = tag("i", [
+            'fa', 'fa-close'
+        ], {
+            style: 'font-size: 10px;width: auto;float: right;margin-top: -3px;margin-right: -1px;color:' +
+            ' #6F6F6F;'
+        });
+        btn.addEventListener("click", function () {
+            target.remove();
+        });
+        return btn;
+    }
 
-        function evalNum() {
-            var nums = document.querySelectorAll(".line.digit span.selected");
-            if (!nums) {
-                return null;
-            }
-            var result = "";
-            for (var i = 0; i < nums.length; i++) {
-                result = result + nums[i].innerHTML;
-                nums[i].classList.remove("selected");
-            }
-
-            var
-                num = parseInt(result),
-                operator = document.querySelector(".operate.selected");
-
-            if (!isNaN(num)) {
-                var numArr = operator.dataset['num'] || [];
-                if (numArr.length > 0) {
-                    numArr = numArr.split(',');
-                }
-                numArr.push(num);
-                operator.dataset['num'] = numArr;
-            }
-        }
-
-        function evalOperator() {
-
+    /**
+     * 初始化操作区域操作符状态
+     */
+    function resetOperatorStatus() {
+        destroyInput();
+        var btns = document.querySelectorAll(".operate-container .selected");
+        for (var i = 0; i < btns.length; i++) {
+            btns[i].classList.remove("selected");
         }
     }
+
+    /**
+     * 初始化输入监听事件
+     */
+    function initInput() {
+        document.addEventListener("keydown", argsInput);
+    }
+
+    /**
+     * 输入处理逻辑
+     */
+    function argsInput() {
+        _debug && console.debug(event);
+        var
+            code = event['keyCode'],
+            shift = event['shiftKey'],
+
+            tag = document.querySelector(".operate.selected");
+
+        if (tag) {
+            if (code == 8) {
+                tag.innerHTML = tag.innerText.replace(/(.\))$/, ")");
+                tag.appendChild(createCloseBtn(tag));
+            } else {
+                //var inputChar = String.fromCharCode(code); // 符号对应不上
+                var inputChar = codeToChar(event);
+
+                _debug && console.debug(inputChar);
+
+                if (inputChar && inputChar.trim()) {
+                    if (!shift && code >= 65 && code <= 90) {
+                        inputChar = inputChar.toLowerCase();
+                    }
+                    tag.innerText = tag.innerText.replace(")", inputChar + ")");
+                    tag.appendChild(createCloseBtn(tag));
+                }
+            }
+        }
+    }
+
+    /**
+     * 销毁输入监听事件
+     */
+    function destroyInput() {
+        document.removeEventListener("keydown", argsInput);
+    }
+
+    /**
+     * event['keyCode'] 对应字符转换
+     */
+    function codeToChar(event) {
+        var
+            result = "",
+
+            code = event['keyCode'],
+
+            shift = event['shiftKey'],
+
+            abc = [
+                'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+                'u',
+                'v',
+                'w', 'x', 'y', 'z'
+            ],
+            abcCode = [],
+
+            digit = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+            digitCode = [],
+
+            symbol_s = ['*', '+', null, '-', '.', '/'],
+            symbolCode_s = [],
+
+            symbol_n = [null, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')'],
+            symbolCode_n = [],
+
+            symbol_m = [';', '=', ',', '-', '.', '/', '`', '[', '\\', ']', "'"],
+            symbolCode_m = [],
+
+            symbol_m_u = [':', '+', '<', '_', '>', '?', '~', '{', '|', '}', '"'],
+            symbolCode_m_u = [];
+
+        // 26个字母
+        for (var j = 65; j < abc.length + 65; j++) {
+            abcCode[j] = abc[j - 65];
+        }
+
+        // 主键盘数字
+        for (j = 48; j < digit.length + 48; j++) {
+            digitCode[j] = digit[j - 48];
+        }
+
+        // 主键盘数字 + shift => 符号
+        for (j = 48; j < symbol_n.length + 48; j++) {
+            symbolCode_n[j] = symbol_n[j - 48];
+        }
+
+        // 小键盘数字
+        for (j = 96; j < digit.length + 96; j++) {
+            digitCode[j] = digit[j - 96];
+        }
+
+        // 小键盘符号
+        for (j = 106; j < symbol_s.length + 106; j++) {
+            symbolCode_s[j] = symbol_s[j - 106];
+        }
+
+        // 主键盘符号
+        for (j = 186; j < symbol_m.length + 186; j++) {
+            symbolCode_m[j] = symbol_m[j - 186];
+        }
+
+        // 主键盘符号 + shift
+        for (j = 186; j < symbol_m_u.length + 186; j++) {
+            symbolCode_m_u[j] = symbol_m_u[j - 186];
+        }
+
+        if (abcCode[code] != undefined && abcCode[code] != null) {
+            if (shift) {
+                result = abcCode[code].toUpperCase();
+            } else {
+                result = abcCode[code];
+            }
+        } else if (digitCode[code] != undefined && digitCode[code] != null) {
+
+            if (shift) {
+                result = symbolCode_n[code];
+            } else {
+                result = digitCode[code];
+            }
+        } else if (symbolCode_s[code] != undefined && symbolCode_s[code] != null) {
+            result = symbolCode_s[code];
+        } else if (symbolCode_m[code] != undefined && symbolCode_m[code] != null) {
+            if (shift) {
+                result = symbolCode_m_u[code];
+            } else {
+                result = symbolCode_m[code];
+            }
+        } else {
+            _debug && warn("codeToChar映射错误！", 1500);
+        }
+
+        return result;
+    }
+
 }
 // /*************************************其他**********************************************/
 
