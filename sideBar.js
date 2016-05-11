@@ -869,34 +869,34 @@ function calc() {
     function createCalc() {
         var
             filtrate = [
-                {name: ':eq()', hasArgs: true},
-                {name: ':gt()', hasArgs: true},
-                {name: ':lt()', hasArgs: true},
-                {name: ':even', hasArgs: false},
-                {name: ':odd', hasArgs: false},
-                {name: ':first', hasArgs: false},
-                {name: ':last', hasArgs: false},
-                {name: ':not()', hasArgs: true},
-                {name: ':has()', hasArgs: true},
-                {name: ':hidden', hasArgs: false},
-                {name: ':visible', hasArgs: false}
+                {name: ':eq()', hasArgs: true, posit: 'inner'},
+                {name: ':gt()', hasArgs: true, posit: 'inner'},
+                {name: ':lt()', hasArgs: true, posit: 'inner'},
+                {name: ':even', hasArgs: false, posit: 'inner'},
+                {name: ':odd', hasArgs: false, posit: 'inner'},
+                {name: ':first', hasArgs: false, posit: 'inner'},
+                {name: ':last', hasArgs: false, posit: 'inner'},
+                {name: ':not()', hasArgs: true, posit: 'inner'},
+                {name: ':has()', hasArgs: true, posit: 'inner'},
+                {name: ':hidden', hasArgs: false, posit: 'inner'},
+                {name: ':visible', hasArgs: false, posit: 'inner'}
             ],
             simpleHandler = [
-                {name: '.remove()', hasArgs: true},
-                {name: '.eq()', hasArgs: true},
-                {name: '.first()', hasArgs: true},
-                {name: '.last()', hasArgs: true},
-                {name: '.filter()', hasArgs: true},
-                {name: '.slice()', hasArgs: true},
-                {name: '.children()', hasArgs: true},
-                {name: '.find()', hasArgs: true},
-                {name: '.parent()', hasArgs: true},
-                {name: '.hide()', hasArgs: true},
-                {name: '.show()', hasArgs: true}
+                {name: '.remove()', hasArgs: true, posit: 'outer'},
+                {name: '.eq()', hasArgs: true, posit: 'outer'},
+                {name: '.first()', hasArgs: true, posit: 'outer'},
+                {name: '.last()', hasArgs: true, posit: 'outer'},
+                {name: '.filter()', hasArgs: true, posit: 'outer'},
+                {name: '.slice()', hasArgs: true, posit: 'outer'},
+                {name: '.children()', hasArgs: true, posit: 'outer'},
+                {name: '.find()', hasArgs: true, posit: 'outer'},
+                {name: '.parent()', hasArgs: true, posit: 'outer'},
+                {name: '.hide()', hasArgs: true, posit: 'outer'},
+                {name: '.show()', hasArgs: true, posit: 'outer'}
             ],
 
         // TODO
-            eventNames = ['click', 'dblclick'],
+            eventNames = [/*'click', 'dblclick'*/],
 
             container = tag("div", [], {style: "/*width: 300px; height: 100px; border: 1px solid silver*/"});
 
@@ -913,7 +913,10 @@ function calc() {
         var filtrateLine = createLine();
         for (var i = 0; i < filtrate.length; i++) {
             var btn = createBtn(filtrate[i]['name']);
+
             btn.dataset['hasArgs'] = filtrate[i]['hasArgs'];
+            btn.dataset['posit'] = filtrate[i]['posit'];
+
             btn.addEventListener("click", addToOperate);
             filtrateLine.appendChild(btn);
         }
@@ -923,7 +926,10 @@ function calc() {
         var simpleHandlerLine = createLine();
         for (i = 0; i < simpleHandler.length; i++) {
             btn = createBtn(simpleHandler[i]['name']);
+
             btn.dataset['hasArgs'] = simpleHandler[i]['hasArgs'];
+            btn.dataset['posit'] = simpleHandler[i]['posit'];
+
             btn.addEventListener("click", addToOperate);
             simpleHandlerLine.appendChild(btn);
         }
@@ -976,7 +982,8 @@ function calc() {
                 area = document.querySelector(".operate-container"),
                 btn = createBtn(me.innerText, ['operate'], {style: 'margin: 2px'}),
                 closeBtn = createCloseBtn(btn),
-                hasArgs = me.dataset['hasArgs'];
+                hasArgs = me.dataset['hasArgs'],
+                posit = me.dataset['posit'];
 
             var btns = area.querySelectorAll(".selected");
             for (var i = 0; i < btns.length; i++) {
@@ -1009,8 +1016,15 @@ function calc() {
                 }
             });
 
+            btn.dataset['posit'] = posit;
+
+            if(!window['operator_selector']){
+                window['operator_selector'] = window['_operator_selector'] = history();
+            }
+
             btn.appendChild(closeBtn);
             area.appendChild(btn);
+            evalOperator();
 
             if (hasArgs == 'true') {
                 // 触发一次click事件：+selected、触发argsInput
@@ -1027,6 +1041,9 @@ function calc() {
             btn.addEventListener("click", function () {
                 operatorPanel.innerHTML = "";
                 operatorPanel.appendChild(btn);
+
+                window['operator_selector'] = history();
+                evalOperator();
             });
             return btn;
         }
@@ -1046,6 +1063,9 @@ function calc() {
         });
         btn.addEventListener("click", function () {
             target.remove();
+
+            window['_operator_selector'] = window['operator_selector'];
+            evalOperator();
         });
         return btn;
     }
@@ -1083,6 +1103,7 @@ function calc() {
             if (code == 8) {
                 tag.innerHTML = tag.innerText.replace(/(.\))$/, ")");
                 tag.appendChild(createCloseBtn(tag));
+                evalOperator();
             } else {
                 //var inputChar = String.fromCharCode(code); // 符号对应不上
                 var inputChar = codeToChar(event);
@@ -1095,6 +1116,7 @@ function calc() {
                     }
                     tag.innerText = tag.innerText.replace(")", inputChar + ")");
                     tag.appendChild(createCloseBtn(tag));
+                    evalOperator();
                 }
             }
         }
@@ -1202,6 +1224,54 @@ function calc() {
         }
 
         return result;
+    }
+
+    /**
+     * 拼接operator到selector
+     */
+    function evalOperator() {
+        var
+            selector = window['operator_selector'],
+            operatorsContainer = document.querySelector('.operate-container'),
+            operators = operatorsContainer.querySelectorAll(".operate-container span");
+
+        if (selector.length == 0) {
+            return null;
+        }
+
+        if(operators.length == 0){
+            input.value = history();
+            return null;
+        }
+
+        if (selector.length > 0) {
+            selector = selector.replace(/\;$/, '');
+        }
+        for (var i = 0; i < operators.length; i++) {
+            var
+                singleQuoteStr = "')",
+                doubleQuoteStr = '")',
+                noQuote = ')',
+                tag = operators[i],
+                posit = tag.dataset['posit'],
+                value = tag.innerText;
+
+            if (!posit || posit == 'outer') {
+                selector = selector + value;
+            } else {
+                if (selector.endsWith(singleQuoteStr)) {
+                    selector = selector.replace(singleQuoteStr, value + singleQuoteStr);
+
+                } else if (selector.endsWith(doubleQuoteStr)) {
+                    selector = selector.replace(doubleQuoteStr, value + doubleQuoteStr);
+                } else {
+                    selector = selector.replace(noQuote, value + noQuote);
+                }
+            }
+        }
+        selector = selector + ";";
+        window['_operator_selector'] = selector;
+        input.value = selector;
     }
 
 }
