@@ -623,6 +623,7 @@ function calc() {
 
     me.style.display = 'block';
     me.innerHTML = '';
+    destroyInput();
 
     window['_history'] = window['_history'] || [];
     window['_h_index'] = window['_h_index'] || 0; // 历史记录的当前序号
@@ -637,23 +638,26 @@ function calc() {
         input = tag("textarea", "calc-editor",
             {
                 title: '使用 alt + up/down 可查看历史记录',
-                style: "width: 410px;" + " font-size: 12px; font-family: monospace; border: 1px solid silver"
+                style: "width: 418px;" + " font-size: 12px; font-family: monospace; border: 1px solid silver"
             }
         ),
 
         iLeft = tag("i", ['fa', 'fa-caret-left'], {title: '上一个'}),
         iSearch = tag("i", ['fa', 'fa-search'], {title: '搜索/执行jQuery语句 ( enter )'}),
-        iRight = tag("i", ['fa', 'fa-caret-right'], {title: "下一个"});
+        iRight = tag("i", ['fa', 'fa-caret-right'], {title: "下一个"}),
 
-    var str = selector.innerText.trim();
+        str = selector.innerText.trim(),
+
+        selector_holder = input.value;
+
     input.value = (str != "无" && str != "") ? str : history() ? history() : "";
 
     // 此次编辑的Selector存入history
     history(null, input.value);
 
-    input.addEventListener("keydown", function (event) {
+    input.addEventListener("keypress", function (event) {
         var _alt = event['altKey'];
-        _debug && console.debug(event);
+
         switch (event["keyCode"]) {
             case 13: // 回车查询
                 if (!event['ctrlKey']) {
@@ -670,6 +674,10 @@ function calc() {
             default:
                 break;
         }
+    });
+
+    input.addEventListener("blur", function () {
+        selector_holder = input.value;
     });
 
     // 前一次查询记录
@@ -869,39 +877,52 @@ function calc() {
     function createCalc() {
         var
             filtrate = [
-                {name: ':eq()', hasArgs: true, posit: 'inner'},
-                {name: ':gt()', hasArgs: true, posit: 'inner'},
-                {name: ':lt()', hasArgs: true, posit: 'inner'},
-                {name: ':even', hasArgs: false, posit: 'inner'},
+                {name: ':visible', hasArgs: false, posit: 'inner'},
+                {name: ':lt()', title: ':lt(index)', hasArgs: true, posit: 'inner'},
+                {name: ':gt()', title: ':gt(index)', hasArgs: true, posit: 'inner'},
+                {name: ':eq()', title: ':eq(index)', hasArgs: true, posit: 'inner'},
                 {name: ':odd', hasArgs: false, posit: 'inner'},
+                {name: ':even', hasArgs: false, posit: 'inner'},
                 {name: ':first', hasArgs: false, posit: 'inner'},
                 {name: ':last', hasArgs: false, posit: 'inner'},
-                {name: ':not()', hasArgs: true, posit: 'inner'},
-                {name: ':has()', hasArgs: true, posit: 'inner'},
                 {name: ':hidden', hasArgs: false, posit: 'inner'},
-                {name: ':visible', hasArgs: false, posit: 'inner'}
+                {name: ':not()', title: ':not(selector)', hasArgs: true, posit: 'inner'},
+                {name: ':has()', title: ':has(selector) ', hasArgs: true, posit: 'inner'},
+                {name: ':contains()', title: ':contains(text)', hasArgs: true, posit: 'inner'}
             ],
             simpleHandler = [
-                {name: '.remove()', hasArgs: true, posit: 'outer'},
-                {name: '.eq()', hasArgs: true, posit: 'outer'},
-                {name: '.first()', hasArgs: true, posit: 'outer'},
-                {name: '.last()', hasArgs: true, posit: 'outer'},
-                {name: '.filter()', hasArgs: true, posit: 'outer'},
-                {name: '.slice()', hasArgs: true, posit: 'outer'},
-                {name: '.children()', hasArgs: true, posit: 'outer'},
-                {name: '.find()', hasArgs: true, posit: 'outer'},
-                {name: '.parent()', hasArgs: true, posit: 'outer'},
-                {name: '.hide()', hasArgs: true, posit: 'outer'},
-                {name: '.show()', hasArgs: true, posit: 'outer'}
+                {name: '.show()', title: 'show([s,[e],[fn]])', hasArgs: true, posit: 'outer'},
+                {name: '.hide()', title: 'hide([s,[e],[fn]])', hasArgs: true, posit: 'outer'},
+                {name: '.remove()', title: 'remove([expr])', hasArgs: true, posit: 'outer'},
+
+                {name: '.slice()', title: 'slice(start,[end])', hasArgs: true, posit: 'outer'},
+                {name: '.find()', title: 'find(e|o|e)', hasArgs: true, posit: 'outer'},
+                {name: '.filter()', title: 'filter(expr|obj|ele|fn)', hasArgs: true, posit: 'outer'},
+
+                {name: '.next()', title: 'next([expr])', hasArgs: true, posit: 'outer'},
+                {name: '.nextall()', title: 'nextall([expr])', hasArgs: true, posit: 'outer'},
+                {name: '.nextUntil()', title: 'nextUntil([element][,filter])', hasArgs: true, posit: 'outer'},
+
+                {name: '.prev()', title: 'prev([expr])', hasArgs: true, posit: 'outer'},
+                {name: '.prevall()', title: 'prevall([expr])', hasArgs: true, posit: 'outer'},
+                {name: '.prevUntil()', title: 'filter([element][,filter])', hasArgs: true, posit: 'outer'},
+
+                {name: '.children()', title: 'children([expr])', hasArgs: true, posit: 'outer'},
+                {name: '.parent()', title: 'parent([expr])', hasArgs: true, posit: 'outer'},
+                {name: '.parents()', title: 'parents([expr])', hasArgs: true, posit: 'outer'},
+                {name: '.siblings()', title: 'siblings([expr])', hasArgs: true, posit: 'outer'}
             ],
 
-        // TODO
-            eventNames = [/*'click', 'dblclick'*/],
+            eventNames = [
+                {name: 'click', hasArgs: true, posit: 'outer'},
+                {name: 'dblclick', hasArgs: true, posit: 'outer'}
+
+            ], // selector中没有trigger时触发事件
 
             container = tag("div", [], {style: "/*width: 300px; height: 100px; border: 1px solid silver*/"});
 
         var operatorPanel = createLine(['operate-container'], {
-            style: 'border: 1px dashed silver; width: 412px; min-height:35px;' +
+            style: 'border: 1px dashed silver; width: 420px; min-height:35px;' +
             ' margin-bottom: 8px;'
         });
 
@@ -917,6 +938,12 @@ function calc() {
             btn.dataset['hasArgs'] = filtrate[i]['hasArgs'];
             btn.dataset['posit'] = filtrate[i]['posit'];
 
+            if (filtrate[i]['title']) {
+                btn.title = filtrate[i]['title'];
+            }else{
+                btn.title = filtrate[i]['name'];
+            }
+
             btn.addEventListener("click", addToOperate);
             filtrateLine.appendChild(btn);
         }
@@ -929,6 +956,12 @@ function calc() {
 
             btn.dataset['hasArgs'] = simpleHandler[i]['hasArgs'];
             btn.dataset['posit'] = simpleHandler[i]['posit'];
+
+            if (simpleHandler[i]['title']) {
+                btn.title = simpleHandler[i]['title'];
+            }else{
+                btn.title = simpleHandler[i]['name'];
+            }
 
             btn.addEventListener("click", addToOperate);
             simpleHandlerLine.appendChild(btn);
@@ -943,6 +976,15 @@ function calc() {
         container.appendChild(eventNamesLine);
 
         container.appendChild(tag("br")); // 调整与下方区域的间隔
+
+        // 鼠标右击查询
+        me.addEventListener("mousedown", function () {
+            _debug && console.debug(event);
+            if(event['which'] == 3){
+                goSearch();
+            }
+        });
+
         return container;
 
         /**
@@ -980,7 +1022,7 @@ function calc() {
             var
                 me = this,
                 area = document.querySelector(".operate-container"),
-                btn = createBtn(me.innerText, ['operate'], {style: 'margin: 2px'}),
+                btn = createBtn(me.innerText, ['operate'], {style: 'margin: 2px; width: auto;'}),
                 closeBtn = createCloseBtn(btn),
                 hasArgs = me.dataset['hasArgs'],
                 posit = me.dataset['posit'];
@@ -1018,10 +1060,6 @@ function calc() {
 
             btn.dataset['posit'] = posit;
 
-            if(!window['operator_selector']){
-                window['operator_selector'] = window['_operator_selector'] = history();
-            }
-
             btn.appendChild(closeBtn);
             area.appendChild(btn);
             evalOperator();
@@ -1042,7 +1080,6 @@ function calc() {
                 operatorPanel.innerHTML = "";
                 operatorPanel.appendChild(btn);
 
-                window['operator_selector'] = history();
                 evalOperator();
             });
             return btn;
@@ -1063,8 +1100,6 @@ function calc() {
         });
         btn.addEventListener("click", function () {
             target.remove();
-
-            window['_operator_selector'] = window['operator_selector'];
             evalOperator();
         });
         return btn;
@@ -1085,13 +1120,14 @@ function calc() {
      * 初始化输入监听事件
      */
     function initInput() {
-        document.addEventListener("keydown", argsInput);
+        document.addEventListener("keydown", window.argsInput);
     }
 
     /**
      * 输入处理逻辑
+     * 在点击"选择器"创建calcContainer前需要destroyInput，argsInput挂在window下比较好拿到.
      */
-    function argsInput() {
+    window.argsInput = function () {
         _debug && console.debug(event);
         var
             code = event['keyCode'],
@@ -1100,7 +1136,40 @@ function calc() {
             tag = document.querySelector(".operate.selected");
 
         if (tag) {
-            if (code == 8) {
+            if (code == 37 || code == 39) { // 移动
+                var
+                    index = 0,
+                    _tag = tag.cloneNode(true),
+                    tags = document.querySelectorAll('span.operate');
+
+                // cloneNode不会克隆closeBtn的事件
+                _tag.querySelector('i').remove();
+                _tag.appendChild(createCloseBtn(_tag));
+
+                for (var k = 0; k < tags.length; k++) {
+
+                    if(tags[k].isSameNode(tag)){
+
+                        if (code == 37) { // 向左
+                            index = k - 1;
+                            if(index >= 0) {
+                                tag.parentNode.insertBefore(_tag, tags[index]);
+                                tag.remove();
+                                evalOperator();
+                            }
+                        } else {// 向右
+                            index = k + 2;
+                            if(index < tags.length + 2) {
+                                tag.parentNode.insertBefore(_tag, tags[index]);
+                                tag.remove();
+                                evalOperator();
+                            }
+                        }
+                        break;
+                    }
+                }
+
+            } else if (code == 8) {
                 tag.innerHTML = tag.innerText.replace(/(.\))$/, ")");
                 tag.appendChild(createCloseBtn(tag));
                 evalOperator();
@@ -1126,7 +1195,7 @@ function calc() {
      * 销毁输入监听事件
      */
     function destroyInput() {
-        document.removeEventListener("keydown", argsInput);
+        document.removeEventListener("keydown", window.argsInput);
     }
 
     /**
@@ -1231,7 +1300,7 @@ function calc() {
      */
     function evalOperator() {
         var
-            selector = window['operator_selector'],
+            selector = selector_holder,
             operatorsContainer = document.querySelector('.operate-container'),
             operators = operatorsContainer.querySelectorAll(".operate-container span");
 
@@ -1239,19 +1308,14 @@ function calc() {
             return null;
         }
 
-        if(operators.length == 0){
-            input.value = history();
-            return null;
-        }
-
         if (selector.length > 0) {
             selector = selector.replace(/\;$/, '');
         }
+
         for (var i = 0; i < operators.length; i++) {
             var
                 singleQuoteStr = "')",
                 doubleQuoteStr = '")',
-                noQuote = ')',
                 tag = operators[i],
                 posit = tag.dataset['posit'],
                 value = tag.innerText;
@@ -1265,12 +1329,11 @@ function calc() {
                 } else if (selector.endsWith(doubleQuoteStr)) {
                     selector = selector.replace(doubleQuoteStr, value + doubleQuoteStr);
                 } else {
-                    selector = selector.replace(noQuote, value + noQuote);
+                    selector = selector.replace(/\)$/, value + ")");
                 }
             }
         }
         selector = selector + ";";
-        window['_operator_selector'] = selector;
         input.value = selector;
     }
 
