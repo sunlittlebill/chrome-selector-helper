@@ -682,9 +682,13 @@ function calc() {
             }
         ),
 
-        iLeft = tag("i", ['fa', 'fa-caret-left'], {title: '上一个'}),
-        iSearch = tag("i", ['fa', 'fa-search'], {title: '搜索/执行jQuery语句 ( enter )'}),
-        iRight = tag("i", ['fa', 'fa-caret-right'], {title: "下一个"}),
+        iSearch = tag("i", ['fa', 'fa-search'], {title: '搜索 ( 右单击 )'}),
+        iLeft = tag("i", ['fa', 'fa-caret-left'], {title: '查询结果中的上一个元素'}),
+        iRight = tag("i", ['fa', 'fa-caret-right'], {title: "查询结果中的下一个元素"}),
+
+        iExecute = tag("i", ['fa', 'fa-play'], {title: '执行表达式 ( 鼠标中键 )'}),
+        iUp = tag("i", ['fa', 'fa-caret-up'], {title: '上一个历史记录'}),
+        iDown = tag("i", ['fa', 'fa-caret-down'], {title: "下一个历史记录"}),
 
         str = selector.innerText.trim(),
 
@@ -695,22 +699,22 @@ function calc() {
     // 此次编辑的Selector存入history
     history(null, input.value);
 
-    input.addEventListener("keypress", function (event) {
+    input.addEventListener("keydown", function (event) {
         var _alt = event['altKey'];
 
         switch (event["keyCode"]) {
-            case 13: // 回车查询
-                if (!event['ctrlKey']) {
-
-                    goSearch(function (len) {
-                        if (len > 0) {
-                            detectEvent();
-                        }
-                    });
-
-                    event.preventDefault();
-                }
-                break;
+            //case 13: // 回车查询
+            //    if (!event['ctrlKey']) {
+            //
+            //        goSearch(function (len) {
+            //            if (len > 0) {
+            //                detectEvent();
+            //            }
+            //        });
+            //
+            //        event.preventDefault();
+            //    }
+            //    break;
             case 38: // 前一次查询记录
                 _alt && (input.value = history(current(-1)));
                 break;
@@ -726,15 +730,7 @@ function calc() {
         selector_holder = input.value;
     });
 
-    // 前一次查询记录
-    iLeft.addEventListener("click", function () {
-        input.value && go(-1);
-    });
-    // 后一次查询记录
-    iRight.addEventListener("click", function () {
-        input.value && go(1);
-    });
-    // 回车查询
+    // 查询
     iSearch.addEventListener("click", function () {
         goSearch.bind(input);
 
@@ -743,6 +739,27 @@ function calc() {
                 detectEvent();
             }
         });
+    });
+    // 查询结果中的上一个元素
+    iLeft.addEventListener("click", function () {
+        input.value && go(-1);
+    });
+    // 查询结果中的下一个元素
+    iRight.addEventListener("click", function () {
+        input.value && go(1);
+    });
+
+    // 执行
+    iExecute.addEventListener("click", function () {
+        execute(input.value);
+    });
+    // 上一个历史记录
+    iUp.addEventListener("click", function () {
+        input.value = history(current(-1));
+    });
+    // 下一个历史记录
+    iDown.addEventListener("click", function () {
+        input.value = history(current(1));
     });
 
     me.appendChild(input);
@@ -754,6 +771,10 @@ function calc() {
     me.appendChild(iSearch);
     me.appendChild(iLeft);
     me.appendChild(iRight);
+
+    me.appendChild(iExecute);
+    me.appendChild(iUp);
+    me.appendChild(iDown);
 
     me.appendChild(createCalc());
 
@@ -858,22 +879,49 @@ function calc() {
 
                     if (typeof callback == "function") {
                         callback(window['_s_length']);
+                    } else {
+                        warn("搜索成功！", 300);
                     }
                 }
             }
         );
 
         function _searchAll(tags) {
-            for (var i = 0; i < tags.length; i++) {
-                if (i == 0) {
-                    coverToEle(tags[i], true, 0);
-                } else {
-                    coverToEle(tags[i], false, i);
+            if(Array.isArray(tags)){
+                for (var i = 0; i < tags.length; i++) {
+                    if (i == 0) {
+                        coverToEle(tags[i], true, 0);
+                    } else {
+                        coverToEle(tags[i], false, i);
+                    }
                 }
-            }
 
-            return tags.length;
+                return tags.length;
+            }else{
+                coverToEle(tags, true, 0);
+                return 1;
+            }
         }
+    }
+
+    /**
+     * 执行输入的表达式
+     * @param expr
+     * @param msg
+     * @returns {null}
+     */
+    function execute(expr, msg) {
+        if (!expr || !expr.trim()) {
+            return null;
+        }
+
+        inspectEval(expr, function (res, isEx) {
+            if (isEx) {
+                warn("表达式有错误！", 500);
+            } else {
+                warn(msg || "执行成功！", 300);
+            }
+        })
     }
 
     /**
@@ -1119,10 +1167,8 @@ function calc() {
         area.appendChild(btn);
         evalOperator();
 
-        if (hasArgs == 'true') {
-            // 触发一次click事件：+selected、触发argsInput
-            btn.click();
-        }
+        // 触发一次click事件：+selected、触发argsInput、可以前后移动
+        btn.click();
     }
 
     /**
@@ -1147,13 +1193,18 @@ function calc() {
         var
             me = this,
             area = document.querySelector(".operate-container"),
-            btn = createBtn(".trigger('" + me.innerText + "')", ['operate'], {style: 'margin: 2px; width: auto;'}),
+            btn = createBtn(".trigger('" + me.innerText + "')", ['operate', 'trigger'], {style: 'margin: 2px; width:' +
+            ' auto;'}),
+            triggerBtn = area.querySelector(".operate.trigger"),
             closeBtn = createCloseBtn(btn),
             posit = "outer";
 
         var btns = area.querySelectorAll(".selected");
         for (var i = 0; i < btns.length; i++) {
             btns[i].classList.remove("selected");
+        }
+        if(triggerBtn){
+            triggerBtn.remove();
         }
 
         btn.addEventListener('click', function () {
@@ -1182,9 +1233,14 @@ function calc() {
 
         btn.dataset['posit'] = posit;
 
+        // 触发一次click事件：+selected、可以前后移动
+        btn.click();
+
         btn.appendChild(closeBtn);
         area.appendChild(btn);
         evalOperator();
+
+        execute(input.value, me.innerText + " 已触发！");
     }
 
     /**
@@ -1300,10 +1356,11 @@ function calc() {
     }
 
     /**
-     * 探测jQuery事件
+     * 探测jQuery、Dom事件
      */
     function detectEvent() {
 
+        var domEvents = [];// TODO
         var selector = input.value.replace(/\;$/, '');
 
         inspectEval("(" + _detectEvent + ")(" + selector + ")", function (events, isExp) {
