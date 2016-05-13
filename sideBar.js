@@ -271,13 +271,10 @@ function setResult(selector, toCopy) {
             var toWarn = "";
             if (isException) {
                 supportJQ = false;
-                toWarn = "注意：此页面不支持jQuery!";
-                // selectorSpan.innerHTML = "$('" + selector + "');";
+                toWarn = "该页面不支持jQuery!";
             } else {
 
                 _debug && console.debug("jQuery version " + result);
-
-                // selectorSpan.innerHTML = "jQuery('" + selector + "');";
             }
 
             selectorSpan.innerHTML = "jQuery('" + selector + "');";
@@ -370,7 +367,8 @@ var
      * @type {string[]}
      */
     barItems = [
-        "item-location", "item-location-auto", "item-location-all", "item-copy", "item-hide", "item-mark-links",
+        "item-location", "item-location-auto", "item-location-all", "item-location-clear", "item-copy", "item-hide",
+        "item-mark-links",
         "item-load-jq"
     ],
 
@@ -397,6 +395,10 @@ for (var i = 0; i < barItems.length; i++) {
         // mark all tag
         case "item-location-all":
             clickListener = markAll;
+            break;
+        // clear all mark
+        case "item-location-clear":
+            clickListener = unMarkAll;
             break;
         // hide tag
         case "item-hide":
@@ -484,6 +486,26 @@ function markAll() {
             }
         }
         // scrollToTag();
+    }
+}
+
+/**
+ * 清除所有的标记
+ */
+function unMarkAll() {
+    inspectEval("(" + _unMark + ")();", function (res, isEx) {
+        if (isEx) {
+            warn("清除失败！", 300);
+        } else {
+            warn("清除成功！", 300);
+        }
+    });
+
+    function _unMark() {
+        var marks = document.querySelectorAll("div.-slct");
+        for (var i = 0; i < marks.length; i++) {
+            marks[i].remove();
+        }
     }
 }
 
@@ -589,7 +611,7 @@ function copySelectorToClip() {
 function markAllLinks() {
     inspectEval("jQuery.fn.jquery", function (res, isEx) {
         if (isEx) {
-            warn("页面中缺少jQuery，请先注入jQuery！", 1500);
+            warn("该页面不支持jQuery！", 1000);
         } else {
             warn("TODO 此功能尚未完成！", 1000);
         }
@@ -682,11 +704,11 @@ function calc() {
             }
         ),
 
-        iSearch = tag("i", ['fa', 'fa-search'], {title: '搜索 ( 右单击 )'}),
+        iSearch = tag("i", ['fa', 'fa-search'], {title: '搜索 ( 左单击空白处 )'}),
         iLeft = tag("i", ['fa', 'fa-caret-left'], {title: '查询结果中的上一个元素'}),
         iRight = tag("i", ['fa', 'fa-caret-right'], {title: "查询结果中的下一个元素"}),
 
-        iExecute = tag("i", ['fa', 'fa-play'], {title: '执行表达式 ( 鼠标中键 )'}),
+        iExecute = tag("i", ['fa', 'fa-play'], {title: '执行表达式 ( 右单击空白处 )'}),
         iUp = tag("i", ['fa', 'fa-caret-up'], {title: '上一个历史记录'}),
         iDown = tag("i", ['fa', 'fa-caret-down'], {title: "下一个历史记录"}),
 
@@ -712,7 +734,6 @@ function calc() {
             //            }
             //        });
             //
-            //        event.preventDefault();
             //    }
             //    break;
             case 38: // 前一次查询记录
@@ -726,12 +747,17 @@ function calc() {
         }
     });
 
+    // 只用来阻止聚焦时产生的鼠标点击事件的传播
+    input.addEventListener("mousedown", function () {
+        event.stopPropagation();
+    });
+
     input.addEventListener("blur", function () {
         selector_holder = input.value;
     });
 
     // 查询
-    iSearch.addEventListener("click", function () {
+    iSearch.addEventListener("mousedown", function () {
         goSearch.bind(input);
 
         goSearch(function (len) {
@@ -739,27 +765,39 @@ function calc() {
                 detectEvent();
             }
         });
+
+        event.stopPropagation();
     });
     // 查询结果中的上一个元素
-    iLeft.addEventListener("click", function () {
+    iLeft.addEventListener("mousedown", function () {
         input.value && go(-1);
+
+        event.stopPropagation();
     });
     // 查询结果中的下一个元素
-    iRight.addEventListener("click", function () {
+    iRight.addEventListener("mousedown", function () {
         input.value && go(1);
+
+        event.stopPropagation();
     });
 
     // 执行
-    iExecute.addEventListener("click", function () {
+    iExecute.addEventListener("mousedown", function () {
         execute(input.value);
+
+        event.stopPropagation();
     });
     // 上一个历史记录
-    iUp.addEventListener("click", function () {
+    iUp.addEventListener("mousedown", function () {
         input.value = history(current(-1));
+
+        event.stopPropagation();
     });
     // 下一个历史记录
-    iDown.addEventListener("click", function () {
+    iDown.addEventListener("mousedown", function () {
         input.value = history(current(1));
+
+        event.stopPropagation();
     });
 
     me.appendChild(input);
@@ -858,7 +896,7 @@ function calc() {
      * 标记所有当前选择器能查找到的元素
      * @returns {number}
      */
-    function goSearch(callback) {
+    function goSearch(callback, toWarn) {
         if (!input.value) {
             return 0;
         }
@@ -873,34 +911,29 @@ function calc() {
             + " (" + _searchAll + ")(" + input.value.replace(/\;$/, "") + ")",
             function (result, isException) {
                 if (isException) {
-                    warn("选择器错误或者页面不支持jQuery！");
+                    warn("该页面不支持jQuery或者表达式错误！");
                 } else {
                     document.querySelector(".selector-num").innerHTML = window['_s_length'] = Number.parseInt(result);
 
                     if (typeof callback == "function") {
                         callback(window['_s_length']);
-                    } else {
-                        warn("搜索成功！", 300);
                     }
+                    toWarn != false && warn("搜索成功！", 300);
                 }
             }
         );
 
         function _searchAll(tags) {
-            if(Array.isArray(tags)){
-                for (var i = 0; i < tags.length; i++) {
-                    if (i == 0) {
-                        coverToEle(tags[i], true, 0);
-                    } else {
-                        coverToEle(tags[i], false, i);
-                    }
+            tags = jQuery(tags);
+            for (var i = 0; i < tags.length; i++) {
+                if (i == 0) {
+                    coverToEle(tags[i], true, 0);
+                } else {
+                    coverToEle(tags[i], false, i);
                 }
-
-                return tags.length;
-            }else{
-                coverToEle(tags, true, 0);
-                return 1;
             }
+
+            return tags.length;
         }
     }
 
@@ -915,11 +948,17 @@ function calc() {
             return null;
         }
 
-        inspectEval(expr, function (res, isEx) {
-            if (isEx) {
-                warn("表达式有错误！", 500);
-            } else {
-                warn(msg || "执行成功！", 300);
+        inspectEval('jQuery.fn.jquery', function (result, exception) {
+            if(!exception){
+                inspectEval("(function(){" + expr + "; return null;})();", function (res, isEx) {
+                    if (isEx) {
+                        warn("表达式有错误！", 500);
+                    } else {
+                        warn(msg || "执行成功！", 300);
+                    }
+                });
+            }else{
+                warn("该页面不支持jQuery或者表达式错误！");
             }
         })
     }
@@ -1047,7 +1086,7 @@ function calc() {
                 btn.title = filtrate[i]['name'];
             }
 
-            btn.addEventListener("click", addToOperate);
+            btn.addEventListener("mousedown", addToOperate);
             filtrateLine.appendChild(btn);
         }
         container.appendChild(filtrateLine);
@@ -1066,7 +1105,7 @@ function calc() {
                 btn.title = simpleHandler[i]['name'];
             }
 
-            btn.addEventListener("click", addToOperate);
+            btn.addEventListener("mousedown", addToOperate);
             simpleHandlerLine.appendChild(btn);
         }
         container.appendChild(simpleHandlerLine);
@@ -1077,13 +1116,14 @@ function calc() {
         window['mouse_right_click'] && me.removeEventListener("mousedown", window['mouse_right_click']);
         me.addEventListener("mousedown", window['mouse_right_click'] = function () {
             _debug && console.debug(event);
-            if (event['which'] == 3) {
+            if (event['which'] == 1) {
                 goSearch(function (len) {
                     if (len > 0) {
                         detectEvent();
                     }
                 });
-
+            } else if (event['which'] == 3) {
+                execute(input.value);
             }
         });
 
@@ -1135,7 +1175,8 @@ function calc() {
             btns[i].classList.remove("selected");
         }
 
-        btn.addEventListener('click', function () {
+        btn.addEventListener('mousedown', function () {
+
             var
                 isSelected = this.classList.contains("selected"),
                 _btns = area.querySelectorAll(".selected");
@@ -1159,16 +1200,21 @@ function calc() {
                 this.classList.add("selected");
                 initInput();
             }
+
+            event.stopPropagation();
         });
 
+        btn.classList.add("selected");
         btn.dataset['posit'] = posit;
 
         btn.appendChild(closeBtn);
         area.appendChild(btn);
         evalOperator();
 
-        // 触发一次click事件：+selected、触发argsInput、可以前后移动
-        btn.click();
+        destroyInput();
+        initInput();
+
+        event.stopPropagation();
     }
 
     /**
@@ -1177,11 +1223,15 @@ function calc() {
      */
     function clearOperators() {
         var btn = tag("i", ['fa', 'fa-close'], {style: 'float:right;margin: 0;color: #6F6F6F;'});
-        btn.addEventListener("click", function () {
+        btn.addEventListener("mousedown", function () {
+
+            var operatorPanel = document.querySelector('.operate-container');
             operatorPanel.innerHTML = "";
             operatorPanel.appendChild(btn);
 
             evalOperator();
+
+            event.stopPropagation();
         });
         return btn;
     }
@@ -1190,11 +1240,14 @@ function calc() {
      *
      */
     function addToTrigger() {
+
         var
             me = this,
             area = document.querySelector(".operate-container"),
-            btn = createBtn(".trigger('" + me.innerText + "')", ['operate', 'trigger'], {style: 'margin: 2px; width:' +
-            ' auto;'}),
+            btn = createBtn(".trigger('" + me.innerText + "')", ['operate', 'trigger'], {
+                style: 'margin: 2px; width:' +
+                ' auto;'
+            }),
             triggerBtn = area.querySelector(".operate.trigger"),
             closeBtn = createCloseBtn(btn),
             posit = "outer";
@@ -1203,11 +1256,12 @@ function calc() {
         for (var i = 0; i < btns.length; i++) {
             btns[i].classList.remove("selected");
         }
-        if(triggerBtn){
+        if (triggerBtn) {
             triggerBtn.remove();
         }
 
         btn.addEventListener('click', function () {
+
             var
                 isSelected = this.classList.contains("selected"),
                 _btns = area.querySelectorAll(".selected");
@@ -1229,18 +1283,20 @@ function calc() {
             } else {
                 this.classList.add("selected");
             }
+
+            event.stopPropagation();
         });
 
+        btn.classList.add('selected');
         btn.dataset['posit'] = posit;
-
-        // 触发一次click事件：+selected、可以前后移动
-        btn.click();
 
         btn.appendChild(closeBtn);
         area.appendChild(btn);
         evalOperator();
 
         execute(input.value, me.innerText + " 已触发！");
+
+        event.stopPropagation();
     }
 
     /**
@@ -1255,9 +1311,12 @@ function calc() {
             style: 'font-size: 10px;width: auto;float: right;margin-top: -3px;margin-right: -1px;color:' +
             ' #6F6F6F;'
         });
-        btn.addEventListener("click", function () {
+        btn.addEventListener("mousedown", function () {
+
             target.remove();
             evalOperator();
+
+            event.stopPropagation();
         });
         return btn;
     }
@@ -1371,7 +1430,7 @@ function calc() {
 
                 btn.title = events[i];
 
-                btn.addEventListener("click", addToTrigger);
+                btn.addEventListener("mousedown", addToTrigger);
 
                 eventNamesLine.appendChild(btn);
             }
