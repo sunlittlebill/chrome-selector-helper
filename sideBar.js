@@ -254,7 +254,13 @@ function setResult(selector, toCopy) {
         calcContainer = document.querySelector(".calc-container"),
         numSpan = document.querySelector(".selector-num");
 
+    selectorSpan.title = '单击可以只拷贝选择器';
+    selectorSpan.style.cursor = 'default';
+
     selectorSpan.classList.add("active");
+
+    selectorSpan.removeEventListener("click", copySelectorToClip);
+    selectorSpan.addEventListener("click", copySelectorToClip);
 
     // 隐藏jQuery计算器
     calcContainer.style.display = 'none';
@@ -510,7 +516,8 @@ function hideTag() {
 }
 
 /**
- * 拷贝到剪切板
+ * 拷贝jQuery表达式(包含selector)到剪切板
+ * @param toWarn
  */
 function copyToClipboard(toWarn) {
     var
@@ -535,7 +542,40 @@ function copyToClipboard(toWarn) {
         msg = "拷贝失败，该chrome版本不支持此操作!";
     }
     window.getSelection().removeAllRanges();
-    toWarn && warn(msg);
+    toWarn && warn(msg, 300);
+}
+
+/**
+ * 只拷贝selector到剪切板
+ */
+function copySelectorToClip() {
+    var
+        msg = "",
+        range = document.createRange(),
+        span = document.querySelector(".result > .selector.active"),
+        text = span.innerText,
+        _text = text;
+
+    if (span) {
+
+        // 针对没有select()方法的元素
+        _text = _text.replace("jQuery('", "").replace("');", "");
+        span.innerText = _text;
+
+        range.selectNode(span);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+
+        try {
+            msg = document.execCommand("copy") ? "拷贝成功!" : "拷贝失败!";
+        } catch (err) {
+            msg = "拷贝失败，该chrome版本不支持此操作!";
+        }
+        window.getSelection().removeAllRanges();
+
+        span.innerText = text;
+        warn(msg, 300);
+    }
 }
 
 /**
@@ -661,7 +701,13 @@ function calc() {
         switch (event["keyCode"]) {
             case 13: // 回车查询
                 if (!event['ctrlKey']) {
-                    goSearch();
+
+                    goSearch(function (len) {
+                        if (len > 0) {
+                            detectEvent();
+                        }
+                    });
+
                     event.preventDefault();
                 }
                 break;
@@ -689,7 +735,15 @@ function calc() {
         input.value && go(1);
     });
     // 回车查询
-    iSearch.addEventListener("click", goSearch.bind(input));
+    iSearch.addEventListener("click", function () {
+        goSearch.bind(input);
+
+        goSearch(function (len) {
+            if (len > 0) {
+                detectEvent();
+            }
+        });
+    });
 
     me.appendChild(input);
 
@@ -781,10 +835,11 @@ function calc() {
 
     /**
      * 标记所有当前选择器能查找到的元素
+     * @returns {number}
      */
-    function goSearch() {
+    function goSearch(callback) {
         if (!input.value) {
-            return;
+            return 0;
         }
 
         history(null, input.value);
@@ -794,13 +849,16 @@ function calc() {
         inspectEval(getTagLeft
             + getTagTop
             + coverToEle
-            + " (" + _searchAll + ")(" + input.value.replace(";", "") + ")",
+            + " (" + _searchAll + ")(" + input.value.replace(/\;$/, "") + ")",
             function (result, isException) {
                 if (isException) {
                     warn("选择器错误或者页面不支持jQuery！");
                 } else {
-
                     document.querySelector(".selector-num").innerHTML = window['_s_length'] = Number.parseInt(result);
+
+                    if (typeof callback == "function") {
+                        callback(window['_s_length']);
+                    }
                 }
             }
         );
@@ -913,13 +971,10 @@ function calc() {
                 {name: '.siblings()', title: 'siblings([expr])', hasArgs: true, posit: 'outer'}
             ],
 
-            eventNames = [
-                {name: 'click', hasArgs: true, posit: 'outer'},
-                {name: 'dblclick', hasArgs: true, posit: 'outer'}
-
-            ], // selector中没有trigger时触发事件
-
-            container = tag("div", [], {style: "/*width: 300px; height: 100px; border: 1px solid silver*/"});
+            container = tag("div", ['line-container'], {
+                style: "/*width: 300px; height: 100px; border: 1px solid" +
+                " silver*/"
+            });
 
         var operatorPanel = createLine(['operate-container'], {
             style: 'border: 1px dashed silver; width: 420px; min-height:35px;' +
@@ -940,7 +995,7 @@ function calc() {
 
             if (filtrate[i]['title']) {
                 btn.title = filtrate[i]['title'];
-            }else{
+            } else {
                 btn.title = filtrate[i]['name'];
             }
 
@@ -959,7 +1014,7 @@ function calc() {
 
             if (simpleHandler[i]['title']) {
                 btn.title = simpleHandler[i]['title'];
-            }else{
+            } else {
                 btn.title = simpleHandler[i]['name'];
             }
 
@@ -968,122 +1023,168 @@ function calc() {
         }
         container.appendChild(simpleHandlerLine);
 
-        // 事件
-        var eventNamesLine = createLine();
-        for (i = 0; i < eventNames.length; i++) {
-            eventNamesLine.appendChild(createBtn(eventNames[i]));
-        }
-        container.appendChild(eventNamesLine);
-
         container.appendChild(tag("br")); // 调整与下方区域的间隔
 
         // 鼠标右击查询
-        me.addEventListener("mousedown", function () {
+        window['mouse_right_click'] && me.removeEventListener("mousedown", window['mouse_right_click']);
+        me.addEventListener("mousedown", window['mouse_right_click'] = function () {
             _debug && console.debug(event);
-            if(event['which'] == 3){
-                goSearch();
+            if (event['which'] == 3) {
+                goSearch(function (len) {
+                    if (len > 0) {
+                        detectEvent();
+                    }
+                });
+
             }
         });
 
         return container;
+    }
 
-        /**
-         *
-         * @param value
-         * @param clazz
-         * @param attrs
-         * @returns {Element}
-         */
-        function createBtn(value, clazz, attrs) {
-            var btn = tag("span", clazz || [], $extends(attrs, {}));
-            btn.innerText = value;
-            return btn;
+    /**
+     *
+     * @param value
+     * @param clazz
+     * @param attrs
+     * @returns {Element}
+     */
+    function createBtn(value, clazz, attrs) {
+        var btn = tag("span", clazz || [], $extends(attrs, {}));
+        btn.innerText = value;
+        return btn;
+    }
+
+    /**
+     *
+     * @param clazz
+     * @param attrs
+     * @returns {Element}
+     */
+    function createLine(clazz, attrs) {
+        var _clazz = ['line'];
+        if (clazz) {
+            _clazz = _clazz.concat(clazz);
+        }
+        _debug && console.debug(_clazz);
+        return tag("div", _clazz, $extends(attrs, {}));
+    }
+
+    /**
+     *
+     */
+    function addToOperate() {
+        var
+            me = this,
+            area = document.querySelector(".operate-container"),
+            btn = createBtn(me.innerText, ['operate'], {style: 'margin: 2px; width: auto;'}),
+            closeBtn = createCloseBtn(btn),
+            hasArgs = me.dataset['hasArgs'],
+            posit = me.dataset['posit'];
+
+        var btns = area.querySelectorAll(".selected");
+        for (var i = 0; i < btns.length; i++) {
+            btns[i].classList.remove("selected");
         }
 
-        /**
-         *
-         * @param clazz
-         * @param attrs
-         * @returns {Element}
-         */
-        function createLine(clazz, attrs) {
-            var _clazz = ['line'];
-            if (clazz) {
-                _clazz = _clazz.concat(clazz);
-            }
-            _debug && console.debug(_clazz);
-            return tag("div", _clazz, $extends(attrs, {}));
-        }
-
-        /**
-         *
-         */
-        function addToOperate() {
+        btn.addEventListener('click', function () {
             var
-                me = this,
-                area = document.querySelector(".operate-container"),
-                btn = createBtn(me.innerText, ['operate'], {style: 'margin: 2px; width: auto;'}),
-                closeBtn = createCloseBtn(btn),
-                hasArgs = me.dataset['hasArgs'],
-                posit = me.dataset['posit'];
+                isSelected = this.classList.contains("selected"),
+                _btns = area.querySelectorAll(".selected");
 
-            var btns = area.querySelectorAll(".selected");
-            for (var i = 0; i < btns.length; i++) {
-                btns[i].classList.remove("selected");
+            destroyInput();
+
+            for (i = 0; i < _btns.length; i++) {
+                _btns[i].classList.remove("selected");
+
             }
 
-            btn.addEventListener('click', function () {
-                var
-                    isSelected = this.classList.contains("selected"),
-                    _btns = area.querySelectorAll(".selected");
-
-                destroyInput();
-
-                for (i = 0; i < _btns.length; i++) {
-                    _btns[i].classList.remove("selected");
-
-                }
-
-                if (btn.isSameNode(this)) {
-                    if (isSelected) {
-                        this.classList.remove("selected");
-                    } else {
-                        this.classList.add("selected");
-                        initInput();
-                    }
-
+            if (btn.isSameNode(this)) {
+                if (isSelected) {
+                    this.classList.remove("selected");
                 } else {
                     this.classList.add("selected");
                     initInput();
                 }
-            });
 
-            btn.dataset['posit'] = posit;
-
-            btn.appendChild(closeBtn);
-            area.appendChild(btn);
-            evalOperator();
-
-            if (hasArgs == 'true') {
-                // 触发一次click事件：+selected、触发argsInput
-                btn.click();
+            } else {
+                this.classList.add("selected");
+                initInput();
             }
+        });
+
+        btn.dataset['posit'] = posit;
+
+        btn.appendChild(closeBtn);
+        area.appendChild(btn);
+        evalOperator();
+
+        if (hasArgs == 'true') {
+            // 触发一次click事件：+selected、触发argsInput
+            btn.click();
+        }
+    }
+
+    /**
+     * 清空所有的操作对象
+     * @returns {Element}
+     */
+    function clearOperators() {
+        var btn = tag("i", ['fa', 'fa-close'], {style: 'float:right;margin: 0;color: #6F6F6F;'});
+        btn.addEventListener("click", function () {
+            operatorPanel.innerHTML = "";
+            operatorPanel.appendChild(btn);
+
+            evalOperator();
+        });
+        return btn;
+    }
+
+    /**
+     *
+     */
+    function addToTrigger() {
+        var
+            me = this,
+            area = document.querySelector(".operate-container"),
+            btn = createBtn(".trigger('" + me.innerText + "')", ['operate'], {style: 'margin: 2px; width: auto;'}),
+            closeBtn = createCloseBtn(btn),
+            posit = "outer";
+
+        var btns = area.querySelectorAll(".selected");
+        for (var i = 0; i < btns.length; i++) {
+            btns[i].classList.remove("selected");
         }
 
-        /**
-         * 清空所有的操作对象
-         * @returns {Element}
-         */
-        function clearOperators() {
-            var btn = tag("i", ['fa', 'fa-close'], {style: 'float:right;margin: 0;color: #6F6F6F;'});
-            btn.addEventListener("click", function () {
-                operatorPanel.innerHTML = "";
-                operatorPanel.appendChild(btn);
+        btn.addEventListener('click', function () {
+            var
+                isSelected = this.classList.contains("selected"),
+                _btns = area.querySelectorAll(".selected");
 
-                evalOperator();
-            });
-            return btn;
-        }
+            destroyInput();
+
+            for (i = 0; i < _btns.length; i++) {
+                _btns[i].classList.remove("selected");
+
+            }
+
+            if (btn.isSameNode(this)) {
+                if (isSelected) {
+                    this.classList.remove("selected");
+                } else {
+                    this.classList.add("selected");
+                }
+
+            } else {
+                this.classList.add("selected");
+            }
+        });
+
+        btn.dataset['posit'] = posit;
+
+        btn.appendChild(closeBtn);
+        area.appendChild(btn);
+        evalOperator();
     }
 
     /**
@@ -1148,18 +1249,18 @@ function calc() {
 
                 for (var k = 0; k < tags.length; k++) {
 
-                    if(tags[k].isSameNode(tag)){
+                    if (tags[k].isSameNode(tag)) {
 
                         if (code == 37) { // 向左
                             index = k - 1;
-                            if(index >= 0) {
+                            if (index >= 0) {
                                 tag.parentNode.insertBefore(_tag, tags[index]);
                                 tag.remove();
                                 evalOperator();
                             }
                         } else {// 向右
                             index = k + 2;
-                            if(index < tags.length + 2) {
+                            if (index < tags.length + 2) {
                                 tag.parentNode.insertBefore(_tag, tags[index]);
                                 tag.remove();
                                 evalOperator();
@@ -1189,13 +1290,62 @@ function calc() {
                 }
             }
         }
-    }
+    };
 
     /**
      * 销毁输入监听事件
      */
     function destroyInput() {
         document.removeEventListener("keydown", window.argsInput);
+    }
+
+    /**
+     * 探测jQuery事件
+     */
+    function detectEvent() {
+
+        var selector = input.value.replace(/\;$/, '');
+
+        inspectEval("(" + _detectEvent + ")(" + selector + ")", function (events, isExp) {
+            // 事件
+            var eventNamesLine = createLine(['event-line']);
+            for (var i = 0; i < events.length; i++) {
+                var btn = createBtn(events[i], null, {style: 'width:auto;'});
+
+                btn.title = events[i];
+
+                btn.addEventListener("click", addToTrigger);
+
+                eventNamesLine.appendChild(btn);
+            }
+            var
+                container = document.querySelector('.line-container'),
+                eventLine = container.querySelector('.event-line'),
+                brs = container.querySelectorAll("br");
+
+            if (eventLine) {
+                eventLine.remove();
+            }
+
+            if (brs.length > 0) {
+                brs[brs.length - 1].remove();
+            }
+            container.appendChild(eventNamesLine);
+            container.appendChild(tag('br'));
+        });
+
+        function _detectEvent(s) {
+            var
+                events = [],
+                _events = jQuery._data(jQuery(s)[0], 'events');
+
+            for (var n in _events) {
+                if (_events.hasOwnProperty(n)) {
+                    events.push(n);
+                }
+            }
+            return events;
+        }
     }
 
     /**
