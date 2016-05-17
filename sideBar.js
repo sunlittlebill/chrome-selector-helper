@@ -16,8 +16,8 @@ var
      * @type {boolean}
      * @private
      */
-    //_debug = true; // _debug && console.debug();
-_debug = false;
+    _debug = true; // _debug && console.debug();
+//_debug = false;
 
 /**
  * 为改变选中的元素添加/删除事件监听器
@@ -1521,7 +1521,7 @@ function calc() {
             symbol_s = ['*', '+', null, '-', '.', '/'],
             symbolCode_s = [],
 
-            symbol_n = [null, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')'],
+            symbol_n = [')', '!', '@', '#', '$', '%', '^', '&', '*', '('],
             symbolCode_n = [],
 
             symbol_m = [';', '=', ',', '-', '.', '/', '`', '[', '\\', ']', "'"],
@@ -1555,14 +1555,24 @@ function calc() {
             symbolCode_s[j] = symbol_s[j - 106];
         }
 
-        // 主键盘符号
-        for (j = 186; j < symbol_m.length + 186; j++) {
-            symbolCode_m[j] = symbol_m[j - 186];
+        // 主键盘符号 keyCode 186-192 219-222
+        for (j = 186; j < (symbol_m.length + 186); j++) {
+            if (j >= (symbol_m.length + 186 - 4)) {
+
+                symbolCode_m[j + 26] = symbol_m[j - 186];
+            } else {
+                symbolCode_m[j] = symbol_m[j - 186];
+            }
         }
 
-        // 主键盘符号 + shift
-        for (j = 186; j < symbol_m_u.length + 186; j++) {
-            symbolCode_m_u[j] = symbol_m_u[j - 186];
+        // 主键盘符号 + shift keyCode 186-192 219-222
+        for (j = 186; j < (symbol_m_u.length + 186); j++) {
+
+            if (j >= (symbol_m_u.length + 186 - 4)) {
+                symbolCode_m_u[j + 26] = symbol_m_u[j - 186];
+            } else {
+                symbolCode_m_u[j] = symbol_m_u[j - 186];
+            }
         }
 
         if (abcCode[code] != undefined && abcCode[code] != null) {
