@@ -170,10 +170,10 @@ function isComment(tag) {
 }
 
 /**
- *
  * 遮盖选中的元素
  * @param ele {Element}
  * @param clearAll {boolean}
+ * @param index {Number}
  */
 function coverToEle(ele, clearAll, index) {
     if (!ele) {
@@ -210,7 +210,8 @@ function coverToEle(ele, clearAll, index) {
         // span.style.verticalAlign = "sub";
         span.style.textAlign = "left";
         span.style.width = "100%";
-        span.innerText = "[" + index + "]";
+        span.innerText = "[" + index + "] " + ele.nodeName;
+        //span.innerText = "[" + index + "]";
         div.appendChild(span);
     }
     document.body.appendChild(div);
@@ -402,6 +403,9 @@ function initTagSelector(modal) {
         if (item["value"].startsWith("#")) { // id
 
             idStr = item["value"];
+            if (/\d/.test(idStr)) {
+                idStr = '[id="' + idStr.replace("#", '') + '"]';
+            }
             hasId = true;
             _modal[i]["check"] = true;
             break;
@@ -421,6 +425,7 @@ function initTagSelector(modal) {
         modal[2] = idStr;
     } else if (hasClass) {
         modal[2] = clazzStr;
+        // TODO 精确筛选class
     } else {
         modal[2] = tagName;
         _modal[0]["check"] = true;
@@ -454,71 +459,13 @@ function siftTagSelector(pSelector, cSelector) {
         // 百度搜出的结果中会有 id=2这种标签
         // document.querySelectorAll("#2")会报错
         console.warn(e);
-        if (jQuery) {
+        if (window['jQuery']) {
             cElements = jQuery(cSelector);
             pElements = jQuery(pSelector + " > " + cSelector);
         }
     }
 
-    return pElements.length < cElements.length;
-}
-
-/**
- * 实现jq中的:visible的类似功能
- * @param tag {Element}
- * @returns {boolean}
- */
-function isVisible(tag) {
-
-    var
-        endTag = "html",
-        current = tag.parentNode;
-
-    while (current != null && endTag != current.tagName.toLowerCase()) {
-        if (current.style.display == "none") {
-            return false;
-        }
-        current = current.parentNode;
-    }
-    return true;
-}
-
-function isVisible2(selector) {
-
-    var
-        startTime = new Date().getTime(),
-        endTag = "html",
-        tags = document.querySelectorAll(selector),
-        result = {
-            count: tags.length,
-            vCount: 0,
-            nvCount: 0,
-            castTime: 0
-        };
-
-    for (var i = 0; i < tags.length; i++) {
-        var
-            flag = true,
-            current = tags[i];
-
-        while (current != null && endTag != current.tagName.toLowerCase()) {
-            if (current.style.display == "none") {
-                flag = false;
-                break;
-            }
-            current = current.parentNode;
-        }
-
-        if (flag) {
-            result.vCount++;
-        } else {
-            result.nvCount++;
-        }
-    }
-
-    //result.castTime = (new Date().getTime() - startTime) / 60;
-    result.castTime = new Date().getTime() - startTime;
-    return result;
+    return cElements.length == 1 ? false : pElements.length < cElements.length;
 }
 
 evalstr = evalstr + doMain + " ";

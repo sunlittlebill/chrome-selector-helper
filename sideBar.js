@@ -16,8 +16,8 @@ var
      * @type {boolean}
      * @private
      */
-    _debug = true; // _debug && console.debug();
-//_debug = false;
+    //_debug = true; // _debug && console.debug();
+_debug = false;
 
 /**
  * 为改变选中的元素添加/删除事件监听器
@@ -283,12 +283,23 @@ function setResult(selector, toCopy) {
             toCopy && copyToClipboard(_debug);
 
             // 要先拷贝后再提示(由于提示时会隐藏结果标签，复制不成功)
-            toWarn && warn(toWarn);
+            toWarn && warn(toWarn, 300);
 
-            inspectEval("$$('" + selector + "').length", function (res, ex) {
+            inspectEval("document.querySelectorAll('" + selector + "').length", function (res, ex) {
 
                 if (ex) {
-                    numSpan.innerHTML = "长度计算出错!";
+                    // numSpan.innerHTML = "长度计算出错!";
+                    inspectEval("jQuery('" + selector + "').length", function (r, e) {
+                        if (e) {
+                            if (!selector || !selector.trim()) {
+                                numSpan.innerHTML = "0";
+                            } else {
+                                numSpan.innerHTML = "长度计算出错!";
+                            }
+                        } else {
+                            numSpan.innerHTML = r;
+                        }
+                    })
                 } else {
                     numSpan.innerHTML = res;
                 }
@@ -340,7 +351,13 @@ function modalToSelector() {
         for (var j = 0; j < modalItem.length; j++) {
             var itemObject = modalItem[j];
             if (itemObject["check"]) {
-                subSelector = subSelector + itemObject['value'];
+
+                // id中是否有数字
+                if (itemObject['value'].startsWith("#") && /\d/.test(itemObject['value'])) {
+                    subSelector = subSelector + '[id="' + itemObject['value'].replace("#", '') + '"]';
+                } else {
+                    subSelector = subSelector + itemObject['value'];
+                }
 
                 // 相邻元素
                 sibling = ((indexCache + 1) == i) ? " > " : " ";
@@ -476,7 +493,15 @@ function markAll() {
     );
 
     function _markAll(selector) {
-        var tags = $$(selector);
+        //try { // 现已将id含有数字的转为了[id='sfa123']形式
+        // 优先使用原生dom api
+        var tags = document.querySelectorAll(selector);
+        //} catch (e) {
+        // #123-ss 类似这种有数字的id原生dom api会报错
+        //if (window['jQuery']) {
+        //    tags = jQuery(selector);
+        //}
+        //}
 
         for (var i = 0; i < tags.length; i++) {
             if (i == 0) {
@@ -485,7 +510,6 @@ function markAll() {
                 coverToEle(tags[i], false, i);
             }
         }
-        // scrollToTag();
     }
 }
 
@@ -517,9 +541,17 @@ function hideTag() {
     inspectEval("(" + _hideOrShowTag + ")('" + selectorGlobal + "')");
 
     function _hideOrShowTag(selector) {
+        //try { // 现已将id含有数字的转为了[id='sfa123']形式
+        // 优先使用原生dom api
         var
             key = "hide",
             tags = document.querySelectorAll(selector);
+        //} catch (e) {
+        // #123-ss 类似这种有数字的id原生dom api会报错
+        //if (window['jQuery']) {
+        //    tags = jQuery(selector);
+        //}
+        //}
 
         for (var i = 0; i < tags.length; i++) {
 
@@ -748,7 +780,7 @@ function calc() {
     });
 
     // 只用来阻止聚焦时产生的鼠标点击事件的传播
-    input.addEventListener("mousedown", function () {
+    input.addEventListener("mouseup", function () {
         event.stopPropagation();
     });
 
@@ -757,7 +789,7 @@ function calc() {
     });
 
     // 查询
-    iSearch.addEventListener("mousedown", function () {
+    iSearch.addEventListener("mouseup", function () {
         goSearch.bind(input);
 
         goSearch(function (len) {
@@ -769,32 +801,32 @@ function calc() {
         event.stopPropagation();
     });
     // 查询结果中的上一个元素
-    iLeft.addEventListener("mousedown", function () {
+    iLeft.addEventListener("mouseup", function () {
         input.value && go(-1);
 
         event.stopPropagation();
     });
     // 查询结果中的下一个元素
-    iRight.addEventListener("mousedown", function () {
+    iRight.addEventListener("mouseup", function () {
         input.value && go(1);
 
         event.stopPropagation();
     });
 
     // 执行
-    iExecute.addEventListener("mousedown", function () {
+    iExecute.addEventListener("mouseup", function () {
         execute(input.value);
 
         event.stopPropagation();
     });
     // 上一个历史记录
-    iUp.addEventListener("mousedown", function () {
+    iUp.addEventListener("mouseup", function () {
         input.value = history(current(-1));
 
         event.stopPropagation();
     });
     // 下一个历史记录
-    iDown.addEventListener("mousedown", function () {
+    iDown.addEventListener("mouseup", function () {
         input.value = history(current(1));
 
         event.stopPropagation();
@@ -878,7 +910,7 @@ function calc() {
 
         function _scrollToTag(selector, index) {
 
-            var tag = window['jQuery'] ? jQuery(selector)[index] : $$(selector)[index];
+            var tag = window['jQuery'] ? jQuery(selector)[index] : document.querySelectorAll(selector)[index];
 
             var cover = document.getElementsByClassName("-slct");
             for (var i = 0; i < cover.length; i++) {
@@ -949,7 +981,7 @@ function calc() {
         }
 
         inspectEval('jQuery.fn.jquery', function (result, exception) {
-            if(!exception){
+            if (!exception) {
                 inspectEval("(function(){" + expr + "; return null;})();", function (res, isEx) {
                     if (isEx) {
                         warn("表达式有错误！", 500);
@@ -957,7 +989,7 @@ function calc() {
                         warn(msg || "执行成功！", 300);
                     }
                 });
-            }else{
+            } else {
                 warn("该页面不支持jQuery或者表达式错误！");
             }
         })
@@ -1086,7 +1118,7 @@ function calc() {
                 btn.title = filtrate[i]['name'];
             }
 
-            btn.addEventListener("mousedown", addToOperate);
+            btn.addEventListener("mouseup", addToOperate);
             filtrateLine.appendChild(btn);
         }
         container.appendChild(filtrateLine);
@@ -1105,7 +1137,7 @@ function calc() {
                 btn.title = simpleHandler[i]['name'];
             }
 
-            btn.addEventListener("mousedown", addToOperate);
+            btn.addEventListener("mouseup", addToOperate);
             simpleHandlerLine.appendChild(btn);
         }
         container.appendChild(simpleHandlerLine);
@@ -1113,8 +1145,8 @@ function calc() {
         container.appendChild(tag("br")); // 调整与下方区域的间隔
 
         // 鼠标右击查询
-        window['mouse_right_click'] && me.removeEventListener("mousedown", window['mouse_right_click']);
-        me.addEventListener("mousedown", window['mouse_right_click'] = function () {
+        window['mouse_right_click'] && me.removeEventListener("mouseup", window['mouse_right_click']);
+        me.addEventListener("mouseup", window['mouse_right_click'] = function () {
             _debug && console.debug(event);
             if (event['which'] == 1) {
                 goSearch(function (len) {
@@ -1175,7 +1207,7 @@ function calc() {
             btns[i].classList.remove("selected");
         }
 
-        btn.addEventListener('mousedown', function () {
+        btn.addEventListener('mouseup', function () {
 
             var
                 isSelected = this.classList.contains("selected"),
@@ -1223,7 +1255,7 @@ function calc() {
      */
     function clearOperators() {
         var btn = tag("i", ['fa', 'fa-close'], {style: 'float:right;margin: 0;color: #6F6F6F;'});
-        btn.addEventListener("mousedown", function () {
+        btn.addEventListener("mouseup", function () {
 
             var operatorPanel = document.querySelector('.operate-container');
             operatorPanel.innerHTML = "";
@@ -1311,7 +1343,7 @@ function calc() {
             style: 'font-size: 10px;width: auto;float: right;margin-top: -3px;margin-right: -1px;color:' +
             ' #6F6F6F;'
         });
-        btn.addEventListener("mousedown", function () {
+        btn.addEventListener("mouseup", function () {
 
             target.remove();
             evalOperator();
@@ -1430,7 +1462,7 @@ function calc() {
 
                 btn.title = events[i];
 
-                btn.addEventListener("mousedown", addToTrigger);
+                btn.addEventListener("mouseup", addToTrigger);
 
                 eventNamesLine.appendChild(btn);
             }
